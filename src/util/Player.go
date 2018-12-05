@@ -221,7 +221,7 @@ func (player *Player) ChangeCard() []MJCard.Card {
 	waitingTime := 30 * time.Second
 	player.Socket().Emit("change", t.ToStringArray(), waitingTime / 1000000)
 
-	c := make(chan []MJCard.Card)
+	c := make(chan []MJCard.Card, 1)
 	var changeCards []MJCard.Card
 	go func() {
 		player.Socket().On("changeCard", func (cards []string) {
@@ -245,7 +245,7 @@ func (player *Player) ChooseLack() int {
 	waitingTime := 10 * time.Second
 	player.Socket().Emit("lack", defaultLack, waitingTime / 1000000)
 
-	c := make(chan int)
+	c := make(chan int, 1)
 	go func() {
 		player.Socket().On("chooseLack", func (lack int) {
 			c<-lack
@@ -265,7 +265,7 @@ func (player *Player) ThrowCard() MJCard.Card {
 	waitingTime := 10 * time.Second
 	player.Socket().Emit("throw", defaultCard.ToString(), waitingTime / 1000000)
 
-	c := make(chan MJCard.Card)
+	c := make(chan MJCard.Card, 1)
 	var throwCard MJCard.Card
 	go func() {
 		player.Socket().On("throwCard", func (card string) {
@@ -374,6 +374,7 @@ func (player *Player) Draw(drawCard MJCard.Card) Action {
 	} else {
 		if player.IsHu {
 			action.Card = drawCard
+			player.game.Rooms[player.Room()].BroadcastThrow(player.id, drawCard)
 		} else {
 			action.Card = player.ThrowCard()
 		}
@@ -402,10 +403,10 @@ func (player *Player) OnCommand(cards map[int][]MJCard.Card, command int, from i
 	b, _ := json.Marshal(actions)
 	player.Socket().Emit("command", string(b), command, waitingTime / 1000000)
 	
-	c := make(chan Action)
+	c := make(chan Action, 1)
 	var action Action
 	go func() {
-		player.Socket().On("throwCard", func (command int, card string) {
+		player.Socket().On("sendCommand", func (command int, card string) {
 			c<-Action {command, MJCard.StringToCard(card), 0}
 		})
 	}()
