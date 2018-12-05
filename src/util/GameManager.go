@@ -49,8 +49,14 @@ func (gManager *GameManager) Login(name string, socket socketio.Socket) (string,
 // Logout handles player's logout
 func (gManager *GameManager) Logout(socket socketio.Socket) {
 	index := gManager.PlayerManager.FindPlayerBySocket(socket)
-	if index >= 0 && index < len(gManager.PlayerManager) && gManager.PlayerManager[index].State == WAITING {
-		gManager.PlayerManager.RemovePlayer(index)
+	if index >= 0 && index < len(gManager.PlayerManager) {
+		if gManager.PlayerManager[index].State == WAITING {
+			gManager.PlayerManager.RemovePlayer(index)
+		} 
+		// else if gManager.PlayerManager[index].State == MATCHED {
+		// 	gManager.RemoveRoom(gManager.PlayerManager[index].Room)
+		// 	gManager.PlayerManager.RemovePlayer(index)
+		// }
 	}
 }
 
@@ -73,11 +79,17 @@ func (gManager *GameManager) WaitingNum() int {
 
 // CreateRoom creates a new room and add player to that room
 func (gManager *GameManager) CreateRoom() {
-	roomName := uuid.Must(uuid.NewV4()).String()
+	var roomName string
+	for ;; {
+		roomName = uuid.Must(uuid.NewV4()).String()
+		if gManager.Rooms[roomName] == nil {
+			break
+		}
+	}
 	gManager.Rooms[roomName] = NewRoom(gManager, roomName)
 	matchPlayer := gManager.Match()
 	gManager.Rooms[roomName].AddPlayer(matchPlayer)
-	gManager.Rooms[roomName].WaitToStart()
+	go gManager.Rooms[roomName].WaitToStart()
 }
 
 // Match matchs 4 player into a room
@@ -98,6 +110,19 @@ func (gManager *GameManager) Match() []string {
 
 // RemoveRoom removes a room by room name
 func (gManager *GameManager) RemoveRoom(name string) {
+	// if gManager.Rooms[name].Waiting {
+	// 	gManager.Rooms[name].StopWaiting()
+	// }
+	// playerList := gManager.PlayerManager.FindPlayersInRoom(name)
+	// for _, player := range playerList {
+	// 	var index int
+	// 	if gManager.Rooms[name].Waiting {
+	// 		index = gManager.PlayerManager.FindPlayerByUUID(player.UUID)
+	// 		gManager.PlayerManager[index].State = WAITING
+	// 	} else {
+	// 		gManager.PlayerManager.RemovePlayer(index)
+	// 	}
+	// }
 	delete(gManager.Rooms, name)
 }
 
@@ -107,10 +132,9 @@ func SSJ(hand uint64, door uint64) int {
 		(gData[hand >> 27] | 4) &
 		(gData[door & 134217727] | 64) &
 		(gData[door >> 27] | 64) &
-		(484 | ((gData[door & 134217727] & gData[door >> 27] & 16) >> 1))) | 
+		(484 | ((gData[door & 134217727] & gData[door >> 27] & 16) >> 1))) |
 		(((gData[hand & 134217727] & (gData[door & 134217727] | 3)) | (gData[hand >> 27] & (gData[door >> 27] | 3))) & 19) |
 		((gData[(hand & 134217727) + (door & 134217727)] & 3584) + (gData[(hand >> 27) + (door >> 27)] & 3584)))
-	println(size, idx, size + idx, max)
 	return gData[size + idx];
 }
 
@@ -119,13 +143,13 @@ func InitHuTable() bool {
 	var i uint
 	gGroup = append(gGroup, 0)
 	for i = 0; i < 9; i++ {
-		gGroup = append(gGroup, 3 << i * 3)
+		gGroup = append(gGroup, 3 << (i * 3))
 	}
 	for i = 0; i < 7; i++ {
-		gGroup = append(gGroup, 73 << i * 3)
+		gGroup = append(gGroup, 73 << (i * 3))
 	}
 	for i = 0; i < 9; i++ {
-		gEye = append(gEye, 2 << i * 3)
+		gEye = append(gEye, 2 << (i * 3))
 	}
 	b01(4, 0, size)
 	b2(4, 0, 1)
@@ -150,7 +174,7 @@ var gEye   []int
 
 func have(m int, s int) bool {
 	for i := uint(0); i < 9; i++ {
-		if ((m >> i * 3) & 7) < ((s >> i * 3) & 7) {
+		if ((m >> (i * 3)) & 7) < ((s >> (i * 3)) & 7) {
 			return false
 		}
 	}
@@ -200,7 +224,7 @@ func b3(n int, d int, c int) {
 }
 
 func b4() {
-	gData[0] |= 10
+	gData[0] |= 16
 }
 
 func b5(n int, d int, c int) {
@@ -255,7 +279,7 @@ func b9UP() {
 	for i := 0; i < size; i++ {
 		k := 0;
 		for j := uint(0); j < 9; j++ {
-			if (i & (4 << j * 3)) != 0 {
+			if (i & (4 << (j * 3))) != 0 {
 				k++;
 			}
 		}
