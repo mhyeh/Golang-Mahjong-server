@@ -11,7 +11,7 @@ type Card struct {
 
 func (this Card) ToString() string {
 	color := [3]string {"c", "d", "b"}
-	return color[this.Color] + strconv.Itoa(int(this.Value))
+	return color[this.Color] + strconv.Itoa(int(this.Value + 1))
 }
 
 func StringArrayToCardArray(cards []string) []Card {

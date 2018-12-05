@@ -26,7 +26,7 @@ type Room struct {
 	HuTiles      Cards
 
 	IO           *socketio.Server
-
+	
 	game         *GameManager
 
 	name         string
@@ -74,19 +74,21 @@ func (this *Room) WaitToStart() {
 	}
 	this.BroadcastGameStart()
 
-	this.Run()
+	go this.Run()
 }
 
-func (this *Room) Accept(uuid string) int {
+func (this *Room) Accept(uuid string, callback func(int)) {
 	index := this.game.PlayerManager.FindPlayerByUUID(uuid)
 	if index == -1 {
-		return -1
+		callback(-1)
+		return
 	}
 	player := this.game.PlayerManager[index]
+	this.BroadcastReady(player.Name)
+	callback(this.NumPlayer())
 	this.Players = append(this.Players, NewPlayer(this.game, this.NumPlayer(), player.Uuid))
 	this.game.PlayerManager[index].State = READY
-	this.BroadcastReady(player.Name)
-	return this.NumPlayer() - 1
+	return
 }
 
 func (this Room) GetPlayerList() []string {
@@ -140,11 +142,11 @@ func (this *Room) Run() {
 	time.Sleep(5 * time.Second)
 	this.chooseLack()
 
-	currentId := 0
+	currentID := 0
 	onlyThrow := false
 	gameOver  := false
-	for ; gameOver; {
-		curPlayer := this.Players[currentId]
+	for ; !gameOver; {
+		curPlayer := this.Players[currentID]
 		throwCard := Card {-1, 0}
 		action := Action {NONE, throwCard, 0}
 
@@ -154,7 +156,7 @@ func (this *Room) Run() {
 			onlyThrow = false
 		} else {
 			drawCard := this.Deck.Draw()
-			this.BroadcastDraw(currentId)
+			this.BroadcastDraw(currentID)
 			action := curPlayer.Draw(drawCard)
 			throwCard = action.Card
 		}
@@ -169,13 +171,13 @@ func (this *Room) Run() {
 			actionSet[0] = act
 
 			for i := 1; i < 4; i++ {
-				id := (i + currentId) % 4;
+				id := (i + currentID) % 4;
 				tai := 0
 				if this.Players[id].CheckHu(action.Card, &tai) {
-					var cards map[int][]Card;
+					cards := make(map[int][]Card)
 					cards[COMMAND_HU] = append(cards[COMMAND_HU], action.Card)
 					go func () {
-						actionSet[i] = this.Players[i].OnCommand(cards, COMMAND_HU, (4 + currentId - id) % 4)
+						actionSet[i] = this.Players[i].OnCommand(cards, COMMAND_HU, (4 + currentID - id) % 4)
 						waitGroup.Done()
 					}()
 				} else {
@@ -184,7 +186,7 @@ func (this *Room) Run() {
 			}
 			waitGroup.Wait()
 			for i := 1; i < 4; i++ {
-				id := (i + currentId) % 4
+				id := (i + currentID) % 4
 				act = actionSet[i]
 				if (act.Command & COMMAND_HU) != 0 {
 					tai := 0
@@ -206,19 +208,21 @@ func (this *Room) Run() {
 				}
 			}
 		} else if (action.Command & COMMAND_ZIMO) != 0 && (action.Command & COMMAND_ONGON) != 0 {
-			this.checkOthers(currentId, throwCard, &huIdx, &gonIdx, &ponIdx)
+			this.checkOthers(currentID, throwCard, &huIdx, &gonIdx, &ponIdx)
 		}
 
-		if fail {
-			curPlayer.OnFail(action.Command)
-		} else {
-			curPlayer.OnSuccess(currentId, action.Command, action.Card, action.Score)
+		if (action.Command != NONE) {
+			if fail {
+				curPlayer.OnFail(action.Command)
+			} else {
+				curPlayer.OnSuccess(currentID, action.Command, action.Card, action.Score)
+			}
 		}
 
 		curPlayer.JustGon = false
 
 		if huIdx != -1 {
-			currentId = (huIdx + 1) % 4
+			currentID = (huIdx + 1) % 4
 			if gonIdx != -1 {
 				this.Players[gonIdx].OnFail(COMMAND_GON)
 			}
@@ -229,24 +233,23 @@ func (this *Room) Run() {
 			this.Players[gonIdx].Gon(throwCard, true)
 			curPlayer.Credit -= 2
 			this.Players[gonIdx].Credit += 2
-			this.Players[gonIdx].GonRecord[currentId] += 2
-			currentId = gonIdx
-			this.Players[gonIdx].OnSuccess(currentId, COMMAND_GON, throwCard, 2)
+			this.Players[gonIdx].GonRecord[currentID] += 2
+			currentID = gonIdx
+			this.Players[gonIdx].OnSuccess(currentID, COMMAND_GON, throwCard, 2)
 			if ponIdx != -1 {
 				this.Players[ponIdx].OnFail(COMMAND_PON)
 			}
 		} else if ponIdx != -1 {
 			this.Players[ponIdx].Pon(throwCard)
-			currentId = ponIdx
+			currentID = ponIdx
 			onlyThrow = true
-			this.Players[ponIdx].OnSuccess(currentId, COMMAND_PON, throwCard, 0)
+			this.Players[ponIdx].OnSuccess(currentID, COMMAND_PON, throwCard, 0)
 		} else if !fail && (action.Command & COMMAND_ONGON) != 0 || (action.Command & COMMAND_ONGON) != 0 {
-			currentId = currentId
 		} else {
 			if throwCard.Color > 0 {
 				this.DiscardTiles.Add(throwCard)
 			}
-			currentId = (currentId + 1) % 4
+			currentID = (currentID + 1) % 4
 		}
 		if this.Deck.IsEmpty() {
 			gameOver = true
@@ -277,7 +280,7 @@ func (this *Room) init() {
 			result := this.Deck.At(int(idx))
 			this.Deck.Sub(result)
 			player.Hand.Add(result)
-			len -= 1
+			len--
 		}
 		player.Socket().Emit("dealCard", player.Hand.ToStringArray())
 	}
@@ -287,10 +290,10 @@ func (this *Room) changeCard() {
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(4)
 	for i := 0; i < 4; i++ {
-		go func () {
-			this.ChangedTiles[i] = this.Players[i].ChangeCard()
+		go func (id int) {
+			this.ChangedTiles[id] = this.Players[id].ChangeCard()
 			waitGroup.Done()
-		}()
+		}(i)
 	}
 	waitGroup.Wait()
 
@@ -327,10 +330,10 @@ func (this *Room) chooseLack() {
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(4)
 	for i := 0; i < 4; i++ {
-		go func () {
-			this.ChoosedLack[i] = this.Players[i].ChooseLack()
+		go func (id int) {
+			this.ChoosedLack[id] = this.Players[id].ChooseLack()
 			waitGroup.Done()
-		}()
+		}(i)
 	}
 	waitGroup.Wait()
 	this.BroadcastLack()
@@ -344,7 +347,7 @@ func (this *Room) checkOthers(currentId int, throwCard Card, huIdx *int, gonIdx 
 	playerCommand[0] = action
 	for i := 1; i < 4; i++ {
 		id := (i + currentId) % 4
-		var actions map[int][]Card
+		actions := make(map[int][]Card)
 		otherPlayer := this.Players[id]
 
 		command := 0
@@ -390,8 +393,8 @@ func (this *Room) checkOthers(currentId int, throwCard Card, huIdx *int, gonIdx 
 	}
 	waitGroup.Wait()
 	for i := 1; i < 4; i++ {
-		playerId := (i + currentId) % 4
-		otherPlayer := this.Players[playerId]
+		playerID := (i + currentId) % 4
+		otherPlayer := this.Players[playerID]
 		action = playerCommand[i]
 		tai := 0
 		otherPlayer.CheckHu(throwCard, &tai)
@@ -402,7 +405,7 @@ func (this *Room) checkOthers(currentId int, throwCard Card, huIdx *int, gonIdx 
 			if *huIdx == -1 {
 				this.HuTiles.Add(action.Card)
 			}
-			*huIdx = playerId
+			*huIdx = playerID
 			Tai := tai
 			if this.Players[currentId].JustGon {
 				Tai++ 
@@ -416,13 +419,13 @@ func (this *Room) checkOthers(currentId int, throwCard Card, huIdx *int, gonIdx 
 			otherPlayer.OnSuccess(currentId, COMMAND_HU, action.Card, score)
 		} else if (action.Command & COMMAND_GON) != 0 {
 			if *huIdx == -1 && *gonIdx == -1 {
-				*gonIdx = playerId
+				*gonIdx = playerID
 			} else {
 				otherPlayer.OnFail(action.Command)
 			}
 		} else if (action.Command & COMMAND_PON) != 0 {
 			if *huIdx == -1 && *gonIdx == -1 && *ponIdx == -1 {
-				*ponIdx = playerId
+				*ponIdx = playerID
 			} else {
 				otherPlayer.OnFail(action.Command)
 			}

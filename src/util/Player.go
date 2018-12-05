@@ -106,7 +106,7 @@ func (this *Player) CheckGon(card Card) bool {
 	}
 	newTai := SSJ(this.Hand.Translate(this.Lack), this.Door.Translate(this.Lack))
 	if newTai > 0 {
-		newTai -= 1
+		newTai--
 	}
 	for i := 0; i < handCount; i++ {
 		this.Hand.Add(card);
@@ -143,13 +143,13 @@ func (this *Player) CheckHu(card Card, tai *int) bool {
 
 func (this *Player) CheckTing(max *int) bool {
 	*max = 0;
-	t_Hand := this.Hand.Translate(this.Lack)
-	t_Door := this.Door.Translate(this.Lack)
-	total := t_Hand + t_Door
+	tHand := this.Hand.Translate(this.Lack)
+	tDoor := this.Door.Translate(this.Lack)
+	total := tHand + tDoor
 	for i := uint(0); i < 18; i++ {
 		if ((total >> (i * 3)) & 7) < 4 {
-			newHand := t_Hand + (1 << (i * 3));
-			tai := SSJ(newHand, t_Door);
+			newHand := tHand + (1 << (i * 3));
+			tai := SSJ(newHand, tDoor);
 			if tai > *max {
 				*max = tai;
 			}
@@ -202,7 +202,7 @@ func (this *Player) ChangeCard() []Card {
 	defaultChange := this.defaultChangeCard()
 	t := CardArrayToCards(defaultChange)
 	waitingTime := 30 * time.Second
-	this.Socket().Emit("change", t.ToStringArray(), waitingTime)
+	this.Socket().Emit("change", t.ToStringArray(), waitingTime / 1000000)
 
 	c := make(chan []Card)
 	var changeCards []Card
@@ -219,13 +219,13 @@ func (this *Player) ChangeCard() []Card {
 	
 	this.Hand.Sub(changeCards)
 	this.game.Rooms[this.Room()].BroadcastChange(this.id)
-	return defaultChange
+	return changeCards
 }
 
 func (this *Player) ChooseLack() int {
 	defaultLack := 0
 	waitingTime := 10 * time.Second
-	this.Socket().Emit("lack", defaultLack, waitingTime)
+	this.Socket().Emit("lack", defaultLack, waitingTime / 1000000)
 
 	c := make(chan int)
 	go func() {
@@ -244,7 +244,7 @@ func (this *Player) ChooseLack() int {
 func (this *Player) ThrowCard() Card {
 	defaultCard := this.Hand.At(0)
 	waitingTime := 10 * time.Second
-	this.Socket().Emit("throw", defaultCard.ToString(), waitingTime)
+	this.Socket().Emit("throw", defaultCard.ToString(), waitingTime / 1000000)
 
 	c := make(chan Card)
 	var throwCard Card
@@ -264,7 +264,7 @@ func (this *Player) ThrowCard() Card {
 }
 
 func (this *Player) Draw(drawCard Card) Action {
-	var actions map[int][]Card
+	actions := make(map[int][]Card)
 	tai     := 0
 	command := 0
 	this.Hand.Add(drawCard)
@@ -345,10 +345,10 @@ func (this *Player) Draw(drawCard Card) Action {
 		this.Gon(action.Card, true)
 		for i := 0; i < 4; i++ {
 			if i != this.id {
-				this.Credit += 1
-				action.Score += 1
-				this.GonRecord[i] += 1
-				this.game.Rooms[this.Room()].Players[i].Credit -= 1
+				this.Credit++
+				action.Score++
+				this.GonRecord[i]++
+				this.game.Rooms[this.Room()].Players[i].Credit--
 			}
 		}
 	} else {
@@ -379,7 +379,7 @@ func (this *Player) OnCommand(cards map[int][]Card, command int, from int) Actio
 	defaultCommand := Action {NONE, Card {-1, 0}, 0}
 	waitingTime := 10 * time.Second
 	b, _ := json.Marshal(actions)
-	this.Socket().Emit("command", string(b), command, waitingTime)
+	this.Socket().Emit("command", string(b), command, waitingTime / 1000000)
 	
 	c := make(chan Action)
 	var action Action
