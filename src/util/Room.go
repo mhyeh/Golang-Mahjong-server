@@ -89,7 +89,7 @@ func (room *Room) WaitToStart() {
 	}
 	room.Waiting = false
 	room.BroadcastGameStart()
-	go room.Run()
+	room.Run()
 }
 
 // StopWaiting stops waiting
@@ -127,6 +127,11 @@ func (room Room) GetPlayerList() []string {
 		nameList = append(nameList, player.Name())
 	}
 	return nameList
+}
+
+// BroadcastRemainCard broadcasts remain card
+func (room Room) BroadcastRemainCard(num uint) {
+	room.IO.BroadcastTo(room.name, "remainCard", num)
 }
 
 // BroadcastStopWaiting broadcasts stop waiting signal
@@ -191,6 +196,7 @@ func (room *Room) Run() {
 	onlyThrow := false
 	gameOver  := false
 	for ; !gameOver; {
+		room.BroadcastRemainCard(room.Deck.Count());
 		curPlayer := room.Players[currentID]
 		throwCard := MJCard.Card {Color: -1, Value: 0}
 		action := Action {NONE, throwCard, 0}
@@ -241,6 +247,7 @@ func (room *Room) Run() {
 					curPlayer.Credit        -= score
 					room.Players[id].Credit += score
 					room.Players[id].HuCards.Add(action.Card)
+					room.Players[id].OnSuccess(currentID, HU, action.Card, score)
 
 					if !fail {
 						curPlayer.Door.Sub(action.Card)
@@ -252,7 +259,7 @@ func (room *Room) Run() {
 					fail = true
 				}
 			}
-		} else if (action.Command & ZIMO) != 0 && (action.Command & ONGON) != 0 {
+		} else if (action.Command & ZIMO) == 0 && (action.Command & ONGON) == 0 {
 			room.checkOthers(currentID, throwCard, &huIdx, &gonIdx, &ponIdx)
 		}
 
@@ -431,10 +438,10 @@ func (room *Room) checkOthers(currentID int, throwCard MJCard.Card, huIdx *int, 
 			playerCommand[i] = action
 			waitGroup.Done()
 		} else {
-			go func() {
-				playerCommand[i] = otherPlayer.OnCommand(actions, command, ((4 + currentID - otherPlayer.ID()) % 4))
+			go func(id int) {
+				playerCommand[id] = otherPlayer.OnCommand(actions, command, ((4 + currentID - otherPlayer.ID()) % 4))
 				waitGroup.Done()
-			}()
+			}(i)
 		}
 	}
 	waitGroup.Wait()
@@ -542,4 +549,8 @@ func (room *Room) end() {
 		data = append(data, GameResult {player.Hand.ToStringArray(), player.Credit})
 	}
 	room.BroadcastEnd(data)
+	// players := room.game.PlayerManager.FindPlayersInRoom(room.name)
+	// for _, player := range players {
+	// 	player.State = WAITING
+	// }
 }
