@@ -28,10 +28,22 @@ func main() {
 
 	server.On("connection", func(so socketio.Socket) {
 		log.Println("on connection")
+
+		so.Emit("auth")
 		
 		so.On("join", func(name string) (string, bool) {
 			_uuid, _err := game.Login(name, so)
 			return _uuid, _err
+		})
+
+		so.On("authWaiting", func(uuid string) string {
+			index := game.PlayerManager.FindPlayerByUUID(uuid)
+			if index == -1 {
+				return "auth failed"
+			}
+
+			game.PlayerManager[index].Socket = &so
+			return ""
 		})
 
 		so.On("auth", func(room string, uuid string) string {
@@ -51,7 +63,7 @@ func main() {
 				return -1
 			}
 
-			c := make(chan int)
+			c := make(chan int, 1)
 			fn := func(id int) {
 				c<-id
 			}
