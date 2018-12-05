@@ -4,7 +4,6 @@ import (
 	"time"
 	"math"
 	"encoding/json"
-	"strconv"
 
 	"github.com/googollee/go-socket.io"
 
@@ -122,23 +121,23 @@ func (player *Player) CheckGon(card MJCard.Card) bool {
 		player.Hand.Add(card);
 		player.Door.Sub(card);
 	}
-	return (oldTai == newTai);
+	return (oldTai == newTai)
 }
 
 // CheckPon checks if the player can pon
 func (player *Player) CheckPon(card MJCard.Card) bool {
 	if card.Color == player.Lack || player.IsHu {
-		return false;
+		return false
 	}
 	count := player.Hand[card.Color].GetIndex(card.Value)
-	return count >= 2;
+	return count >= 2
 }
 
 // CheckHu checks if the player can hu
 func (player *Player) CheckHu(card MJCard.Card, tai *int) bool {
 	*tai = 0
 	if player.Hand[player.Lack].Count() > 0 {
-		return false;
+		return false
 	}
 	if card.Color == -1 {
 		*tai = SSJ(player.Hand.Translate(player.Lack), player.Door.Translate(player.Lack))
@@ -335,16 +334,15 @@ func (player *Player) Draw(drawCard MJCard.Card) Action {
 		player.HuCards.Add(action.Card)
 		player.game.Rooms[player.Room()].HuTiles.Add(action.Card)
 		player.Hand.Sub(action.Card)
-		action.Card.Color = -1
-		Tai := tai
+		Tai := tai + 1
 		if player.JustGon {
 			Tai++ 
 		}
 		score := int(math.Pow(2, float64(Tai)))
+		action.Score = score
 		for i := 0; i < 4; i++ {
 			if player.id != i {
 				player.Credit += score
-				action.Score += score
 				if player.MaxTai < tai {
 					player.MaxTai = tai
 				}
@@ -353,20 +351,20 @@ func (player *Player) Draw(drawCard MJCard.Card) Action {
 		}
 	} else if (action.Command & ONGON) != 0 {
 		player.Gon(action.Card, false)
+		action.Score = 2
 		for i := 0; i < 4; i++ {
 			if i != player.id {
 				player.Credit += 2
-				action.Score += 2
 				player.GonRecord[i] += 2
 				player.game.Rooms[player.Room()].Players[i].Credit -= 2
 			}
 		}
 	} else if (action.Command & PONGON) != 0 {
 		player.Gon(action.Card, true)
+		action.Score = 1
 		for i := 0; i < 4; i++ {
 			if i != player.id {
 				player.Credit++
-				action.Score++
 				player.GonRecord[i]++
 				player.game.Rooms[player.Room()].Players[i].Credit--
 			}
@@ -388,13 +386,13 @@ func (player *Player) Draw(drawCard MJCard.Card) Action {
 // OnCommand emits to client to get command
 func (player *Player) OnCommand(cards map[int][]MJCard.Card, command int, from int) Action {
 	type ActionSet struct {
-		key string
-		value []string
+		Key   int
+		Value []string
 	}
 	var actions []ActionSet
 	for key, value := range cards {
 		t := MJCard.CardArrayToCards(value)
-		actionSet := ActionSet {strconv.Itoa(key), t.ToStringArray()}
+		actionSet := ActionSet {key, t.ToStringArray()}
 		actions = append(actions, actionSet)
 	}
 
