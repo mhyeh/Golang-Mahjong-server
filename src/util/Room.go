@@ -14,7 +14,7 @@ import (
 
 // NewRoom creates a new room
 func NewRoom(game *GameManager, name string) *Room {
-	return &Room {game: game, name: name}
+	return &Room {game: game, name: name, Waiting: false}
 	
 }
 
@@ -26,6 +26,7 @@ type Room struct {
 	Deck         MJCard.Cards
 	DiscardTiles MJCard.Cards
 	HuTiles      MJCard.Cards
+	Waiting      bool
 
 	IO           *socketio.Server
 	
@@ -78,16 +79,34 @@ func (room *Room) RemovePlayer(id int) {
 // WaitToStart checks if all player in this room are ready
 // and run the mahjong logic
 func (room *Room) WaitToStart() {
-	for ; room.NumPlayer() < 4; {
+	room.Waiting = true
+	for ; room.NumPlayer() < 4 && room.Waiting; {
 		time.Sleep(0)
 	}
-	room.BroadcastGameStart()
 
+	if !room.Waiting {
+		return
+	}
+	room.Waiting = false
+	room.BroadcastGameStart()
 	go room.Run()
+}
+
+// StopWaiting stops waiting
+func (room *Room) StopWaiting() {
+	room.BroadcastStopWaiting()
+	room.Waiting = false
+	for i := 0; i < room.NumPlayer(); i++ {
+		room.Players[i] = nil
+	}
 }
 
 // Accept checks player's info and constructs the player
 func (room *Room) Accept(uuid string, callback func(int)) {
+	if !room.Waiting {
+		callback(-1)
+		return
+	}
 	index := room.game.PlayerManager.FindPlayerByUUID(uuid)
 	if index == -1 {
 		callback(-1)
@@ -108,6 +127,11 @@ func (room Room) GetPlayerList() []string {
 		nameList = append(nameList, player.Name())
 	}
 	return nameList
+}
+
+// BroadcastStopWaiting broadcasts stop waiting signal
+func (room Room) BroadcastStopWaiting() {
+	room.IO.BroadcastTo(room.name, "stopWaiting")
 }
 
 // BroadcastReady broadcasts the player's name who is ready
@@ -344,7 +368,7 @@ func (room *Room) changeCard() {
 	for i := 0; i < 4; i++ {
 		room.Players[i].Hand.Add(room.ChangedTiles[i])
 		t := MJCard.CardArrayToCards(room.ChangedTiles[i])
-		room.Players[i].Socket().Emit("afterChange", t.ToStringArray())
+		room.Players[i].Socket().Emit("afterChange", t.ToStringArray(), rand)
 	}
 }
 
