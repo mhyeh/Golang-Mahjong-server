@@ -49,9 +49,15 @@ func (pManager *PlayerManager) AddPlayer(name string) (string, bool) {
 	if pManager.FindPlayerByName(name) != -1 {
 		return "", true
 	}
-	uuid := uuid.Must(uuid.NewV4()).String()
-	*pManager = append(*pManager, &IPlayer {name, uuid, "", nil, WAITING})
-	return uuid, false
+	var _uuid string
+	for ;; {
+		_uuid = uuid.Must(uuid.NewV4()).String()
+		if pManager.FindPlayerByUUID(_uuid) == -1 {
+			break
+		}
+	}
+	*pManager = append(*pManager, &IPlayer {name, _uuid, "", nil, WAITING})
+	return _uuid, false
 }
 
 // RemovePlayer remove a player from PlayerManager
