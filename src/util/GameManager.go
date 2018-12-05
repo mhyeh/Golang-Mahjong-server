@@ -8,16 +8,18 @@ import (
 	"github.com/satori/go.uuid";
 )
 
+// command type
 const  (
-	NONE           = 0
-	COMMAND_PON    = 1
-	COMMAND_GON    = 2
-	COMMAND_ONGON  = 4
-	COMMAND_PONGON = 8
-	COMMAND_HU     = 16
-	COMMAND_ZIMO   = 32
+	NONE   = 0
+	PON    = 1
+	GON    = 2
+	ONGON  = 4
+	PONGON = 8
+	HU     = 16
+	ZIMO   = 32
 )
 
+// NewGameManager creates a new gameManager
 func NewGameManager() GameManager {
 	rooms := make(map[string]*Room)
 	var playerManager PlayerManager
@@ -25,34 +27,38 @@ func NewGameManager() GameManager {
 	return game
 }
 
+// GameManager represents a gameManager
 type GameManager struct {
 	Rooms map[string]*Room
 	PlayerManager PlayerManager
 }
 
-func (this *GameManager) Login(name string, socket socketio.Socket) (string, bool) {
-	uuid, err := this.PlayerManager.AddPlayer(name)
+// Login handles player's login
+func (gManager *GameManager) Login(name string, socket socketio.Socket) (string, bool) {
+	uuid, err := gManager.PlayerManager.AddPlayer(name)
 	if err {
 		return "", true
 	}
-	index := this.PlayerManager.FindPlayerByUUID(uuid)
-	this.PlayerManager[index].Socket = &socket
-	this.PlayerManager[index].State  = WAITING
+	index := gManager.PlayerManager.FindPlayerByUUID(uuid)
+	gManager.PlayerManager[index].Socket = &socket
+	gManager.PlayerManager[index].State  = WAITING
 
 	return uuid, false
 }
 
-func (this *GameManager) Logout(socket socketio.Socket) {
-	index := this.PlayerManager.FindPlayerBySocket(socket)
-	if index >= 0 && index < len(this.PlayerManager) && this.PlayerManager[index].State == WAITING {
-		this.PlayerManager.RemovePlayer(index)
+// Logout handles player's logout
+func (gManager *GameManager) Logout(socket socketio.Socket) {
+	index := gManager.PlayerManager.FindPlayerBySocket(socket)
+	if index >= 0 && index < len(gManager.PlayerManager) && gManager.PlayerManager[index].State == WAITING {
+		gManager.PlayerManager.RemovePlayer(index)
 	}
 }
 
-func (this *GameManager) Exec() {
+// Exec executes the whole game
+func (gManager *GameManager) Exec() {
 	for {
-		if this.WaitingNum() >= 4 {
-			this.CreateRoom()
+		if gManager.WaitingNum() >= 4 {
+			gManager.CreateRoom()
 			time.Sleep(2 * time.Second)
 		} else {
 			time.Sleep(10 * time.Second)
@@ -60,60 +66,66 @@ func (this *GameManager) Exec() {
 	}
 }
 
-func (this *GameManager) WaitingNum() int {
-	return len(this.PlayerManager.FindPlayersIsSameState(WAITING))
+// WaitingNum returns the number of player which state are waiting
+func (gManager *GameManager) WaitingNum() int {
+	return len(gManager.PlayerManager.FindPlayersIsSameState(WAITING))
 }
 
-func (this *GameManager) CreateRoom() {
+// CreateRoom creates a new room and add player to that room
+func (gManager *GameManager) CreateRoom() {
 	roomName := uuid.Must(uuid.NewV4()).String()
-	this.Rooms[roomName] = NewRoom(this, roomName)
-	matchPlayer := this.Match()
-	this.Rooms[roomName].AddPlayer(matchPlayer)
-	this.Rooms[roomName].WaitToStart()
+	gManager.Rooms[roomName] = NewRoom(gManager, roomName)
+	matchPlayer := gManager.Match()
+	gManager.Rooms[roomName].AddPlayer(matchPlayer)
+	gManager.Rooms[roomName].WaitToStart()
 }
 
-func (this *GameManager) Match() []string {
-	waitingList := this.PlayerManager.FindPlayersIsSameState(WAITING)
+// Match matchs 4 player into a room
+func (gManager *GameManager) Match() []string {
+	waitingList := gManager.PlayerManager.FindPlayersIsSameState(WAITING)
 	var sample []string
 	for i := 0; i < 4; i++ {
 		index := rand.Int31n(int32(len(waitingList)))
-		sample = append(sample, waitingList[index].Uuid)
+		sample = append(sample, waitingList[index].UUID)
 		waitingList = append(waitingList[: index], waitingList[index + 1: ]...)
 	}
 	for _, uuid := range sample {
-		index := this.PlayerManager.FindPlayerByUUID(uuid)
-		this.PlayerManager[index].State = MATCHED
+		index := gManager.PlayerManager.FindPlayerByUUID(uuid)
+		gManager.PlayerManager[index].State = MATCHED
 	}
 	return sample
 }
 
-func (this *GameManager) RemoveRoom(name string) {
-	delete(this.Rooms, name)
+// RemoveRoom removes a room by room name
+func (gManager *GameManager) RemoveRoom(name string) {
+	delete(gManager.Rooms, name)
 }
 
+// SSJ cals tai
 func SSJ(hand uint64, door uint64) int {
-	idx := (((g_data[hand & 134217727] | 4) &
-		(g_data[hand >> 27] | 4) &
-		(g_data[door & 134217727] | 64) &
-		(g_data[door >> 27] | 64) &
-		(484 | ((g_data[door & 134217727] & g_data[door >> 27] & 16) >> 1))) | 
-		(((g_data[hand & 134217727] & (g_data[door & 134217727] | 3)) | (g_data[hand >> 27] & (g_data[door >> 27] | 3))) & 19) |
-		((g_data[(hand & 134217727) + (door & 134217727)] & 3584) + (g_data[(hand >> 27) + (door >> 27)] & 3584)))
+	idx := (((gData[hand & 134217727] | 4) &
+		(gData[hand >> 27] | 4) &
+		(gData[door & 134217727] | 64) &
+		(gData[door >> 27] | 64) &
+		(484 | ((gData[door & 134217727] & gData[door >> 27] & 16) >> 1))) | 
+		(((gData[hand & 134217727] & (gData[door & 134217727] | 3)) | (gData[hand >> 27] & (gData[door >> 27] | 3))) & 19) |
+		((gData[(hand & 134217727) + (door & 134217727)] & 3584) + (gData[(hand >> 27) + (door >> 27)] & 3584)))
 	println(size, idx, size + idx, max)
-	return g_data[size + idx];
+	return gData[size + idx];
 }
 
+// InitHuTable intis the hu table
 func InitHuTable() bool {
 	var i uint
-	g_group = append(g_group, 0)
+	gGroup = append(gGroup, 0)
 	for i = 0; i < 9; i++ {
-		g_group = append(g_group, 3 << i * 3)
+		gGroup = append(gGroup, 3 << i * 3)
 	}
 	for i = 0; i < 7; i++ {
-		g_group = append(g_group, 73 << i * 3)
+		gGroup = append(gGroup, 73 << i * 3)
 	}
 	for i = 0; i < 9; i++ {
-		g_eye = append(g_eye, 2 << i * 3)
+		gEye = append(gEye, 2 << i * 3)
 	}
 	b01(4, 0, size)
 	b2(4, 0, 1)
@@ -132,9 +144,9 @@ func InitHuTable() bool {
 const size = 76695844
 const max  = 76699939
 
-var g_data  [max]int
-var g_group []int
-var g_eye   []int
+var gData  [max]int
+var gGroup []int
+var gEye   []int
 
 func have(m int, s int) bool {
 	for i := uint(0); i < 9; i++ {
@@ -149,74 +161,74 @@ func b01(n int, d int, p int) {
 	var i int
 	if n != 0 {
 		for i = 0; i < 17; i++ {
-			if have(p, g_group[i]) {
-				b01(n - 1, d + g_group[i], p - g_group[i])
+			if have(p, gGroup[i]) {
+				b01(n - 1, d + gGroup[i], p - gGroup[i])
 			}
 		}
 	} else {
-		g_data[d] |= 1
+		gData[d] |= 1
 		for i = 0; i < 9; i++ {
-			if have(p, g_eye[i]) {
-				g_data[d + g_eye[i]] |= 2
+			if have(p, gEye[i]) {
+				gData[d + gEye[i]] |= 2
 			}
 		}
 	}
 }
 
 func b2(n int, d int, c int) {
-	g_data[d] |= 4;
-	g_data[d] |= 32;
+	gData[d] |= 4;
+	gData[d] |= 32;
 	if (d & 16777208) == 0 {
-		g_data[d] |= 256;
+		gData[d] |= 256;
 	}
 	if n != 0 {
 		for i := c; i <= 9; i++ {
-			b2(n - 1, d + g_group[i], i + 1);
-			b2(n - 1, d + g_group[i] / 3 * 4, i + 1);
+			b2(n - 1, d + gGroup[i], i + 1);
+			b2(n - 1, d + gGroup[i] / 3 * 4, i + 1);
 		}
 	}
 }
 
 func b3(n int, d int, c int) {
-	g_data[d] |= 8;
+	gData[d] |= 8;
 	if n != 0 {
 		for i := c; i <= 9; i++ {
-			b3(n - 1, d + g_group[i] / 3 * 2, i + 1);
-			b3(n - 2, d + g_group[i] / 3 * 4, i + 1);
+			b3(n - 1, d + gGroup[i] / 3 * 2, i + 1);
+			b3(n - 2, d + gGroup[i] / 3 * 4, i + 1);
 		}
 	}
 }
 
 func b4() {
-	g_data[0] |= 10
+	gData[0] |= 10
 }
 
 func b5(n int, d int, c int) {
 	var i int;
-	g_data[d] |= 32;
+	gData[d] |= 32;
 	for i = 0; i < 9; i++ {
-		if have(size - d, g_eye[i]) {
-			g_data[d + g_eye[i]] |= 32;
+		if have(size - d, gEye[i]) {
+			gData[d + gEye[i]] |= 32;
 		}
 	}
 	if n != 0 {
 		for i = c; i <= 9; i++ {
-			b5(n - 1, d + g_group[i], i + 1);
+			b5(n - 1, d + gGroup[i], i + 1);
 		}
 	}
 }
 
 func b6() {
-	g_data[0] |= 64;
+	gData[0] |= 64;
 	for i := 0; i < 9; i++ {
-		g_data[g_eye[i]] |= 64;
+		gData[gEye[i]] |= 64;
 	}
 }
 
 func b7() {
 	for i := 0; i < size; i++ {
 		if (i & 119508935) == 0 {
-			g_data[i] |= 128;
+			gData[i] |= 128;
 		}
 	}
 }
@@ -225,15 +237,15 @@ func b8(n int, d int, p int) {
 	var i int;
 	if n != 0 {
 		for i = 0; i < 17; i++ {
-			if have(p, g_group[i]) && (i == 0 || i == 1 || i == 9 || i == 10 || i == 16) {
-				b8(n - 1, d + g_group[i], p - g_group[i]);
+			if have(p, gGroup[i]) && (i == 0 || i == 1 || i == 9 || i == 10 || i == 16) {
+				b8(n - 1, d + gGroup[i], p - gGroup[i]);
 			}
 		}
 	} else {
-		g_data[d] |= 256;
+		gData[d] |= 256;
 		for i = 0; i < 9; i++ {
-			if have(p, g_eye[i]) && (i == 0 || i == 8) {
-				g_data[d + g_eye[i]] |= 256;
+			if have(p, gEye[i]) && (i == 0 || i == 8) {
+				gData[d + gEye[i]] |= 256;
 			}
 		}
 	}
@@ -250,7 +262,7 @@ func b9UP() {
 		if k > 7 {
 			k = 7;
 		}
-		g_data[i] |= (k << 9);
+		gData[i] |= (k << 9);
 	}
 }
 
@@ -300,6 +312,6 @@ func t() {
 			}
 			k += (i >> 9);
 		}
-		g_data[size + i] = int(k);
+		gData[size + i] = int(k);
 	}
 }
