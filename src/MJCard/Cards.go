@@ -88,7 +88,7 @@ func (this Cards) ToStringArray() []string {
 	for c := 0; c < 3; c++ {
 		for v := uint(0); v < 9; v++ {
 			for n := uint(0); n < this[c].GetIndex(v); n++ {
-				result = append(result, colorArr[c] + string(v + 1))
+				result = append(result, colorArr[c] + strconv.Itoa(int(v + 1)))
 			}
 		}
 	}

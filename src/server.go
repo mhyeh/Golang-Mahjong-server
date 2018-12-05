@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/googollee/go-socket.io"
+	"github.com/rs/cors"
 
 	. "util"
 )
@@ -23,37 +24,39 @@ func main() {
 		return
 	}
 	
-	game.Exec()
+	go game.Exec()
 
 	server.On("connection", func(so socketio.Socket) {
 		log.Println("on connection")
 		
-		so.On("join", func(name string, callback func(uuid string, err bool)) {
-			callback(game.Login(name, so))
+		so.On("join", func(name string) (string, bool) {
+			_uuid, _err := game.Login(name, so)
+			return _uuid, _err
 		})
 
-		so.On("auth", func(room string, uuid string, callback func(err string)) {
+		so.On("auth", func(room string, uuid string) string {
 			if !game.PlayerManager.Auth(room, uuid) {
-				callback("auth failed")
-				return
+				return "auth failed"
 			}
 
 			so.Join(room)
 			game.Rooms[room].IO = server
 			index := game.PlayerManager.FindPlayerByUUID(uuid)
 			game.PlayerManager[index].Socket = &so
-			callback("")
+			return ""
 		})
 
-		so.On("ready", func(room string, uuid string, callback func(err int)) {
+		so.On("ready", func(room string, uuid string) int {
 			if !game.PlayerManager.Auth(room, uuid) {
-				callback(-1)
-				return
+				return -1
 			}
 
-			id := game.Rooms[room].Accept(uuid)
-			println("Accept", id)
-			callback(id)
+			c := make(chan int)
+			fn := func(id int) {
+				c<-id
+			}
+			go game.Rooms[room].Accept(uuid, fn)
+			return <-c
 		})
 
 		so.On("disconnection", func() {
@@ -65,7 +68,17 @@ func main() {
 		log.Println("error:", err)
 	})
 
-	http.Handle("/", server)
-	log.Println("Serving at localhost:3000...")
-	log.Fatal(http.ListenAndServe(":3000", nil))
+	mux := http.NewServeMux()
+	mux.Handle("/socket.io/", server)
+
+	c := cors.New(cors.Options{
+		AllowedOrigins: []string{"http://140.118.127.157:9000"},
+		AllowCredentials: true,
+	})
+	
+
+	handler := c.Handler(mux)
+
+	log.Println("Serving at 140.118.127.157:3000...")
+	log.Fatal(http.ListenAndServe("140.118.127.157:3000", handler))
 }

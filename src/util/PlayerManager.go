@@ -40,7 +40,7 @@ func GetUUIDList(list []IPlayer) []string {
 type PlayerManager []*IPlayer
 
 func (this *PlayerManager) AddPlayer(name string) (string, bool) {
-	if this.FindPlayerByName(name) == -1 {
+	if this.FindPlayerByName(name) != -1 {
 		return "", true
 	}
 	uuid := uuid.Must(uuid.NewV4()).String()

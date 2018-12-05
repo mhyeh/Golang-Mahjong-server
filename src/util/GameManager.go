@@ -19,7 +19,7 @@ const  (
 )
 
 func NewGameManager() GameManager {
-	var rooms map[string]*Room
+	rooms := make(map[string]*Room)
 	var playerManager PlayerManager
 	game := GameManager {rooms, playerManager}
 	return game
@@ -38,7 +38,7 @@ func (this *GameManager) Login(name string, socket socketio.Socket) (string, boo
 	index := this.PlayerManager.FindPlayerByUUID(uuid)
 	this.PlayerManager[index].Socket = &socket
 	this.PlayerManager[index].State  = WAITING
-	
+
 	return uuid, false
 }
 
@@ -99,6 +99,7 @@ func SSJ(hand uint64, door uint64) int {
 		(484 | ((g_data[door & 134217727] & g_data[door >> 27] & 16) >> 1))) | 
 		(((g_data[hand & 134217727] & (g_data[door & 134217727] | 3)) | (g_data[hand >> 27] & (g_data[door >> 27] | 3))) & 19) |
 		((g_data[(hand & 134217727) + (door & 134217727)] & 3584) + (g_data[(hand >> 27) + (door >> 27)] & 3584)))
+	println(size, idx, size + idx, max)
 	return g_data[size + idx];
 }
 
