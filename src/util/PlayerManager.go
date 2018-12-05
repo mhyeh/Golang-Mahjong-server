@@ -5,6 +5,7 @@ import (
 	"github.com/satori/go.uuid"
 )
 
+// player's state
 const (
 	WAITING = 0
 	MATCHED = 1
@@ -13,14 +14,16 @@ const (
 	LEAVE   = 8
 )
 
+// IPlayer represents the player's info
 type IPlayer struct {
 	Name   string
-	Uuid   string
+	UUID   string
 	Room   string
 	Socket *socketio.Socket
 	State  int
 }
 
+// GetNameList returns the list of player's name
 func GetNameList(list []*IPlayer) []string {
 	var nameList []string
 	for _, player := range list {
@@ -29,33 +32,38 @@ func GetNameList(list []*IPlayer) []string {
 	return nameList
 }
 
+// GetUUIDList returns the list of player's uuid
 func GetUUIDList(list []IPlayer) []string {
 	var uuidList []string
 	for _, player := range list {
-		uuidList = append(uuidList, player.Uuid)
+		uuidList = append(uuidList, player.UUID)
 	}
 	return uuidList
 }
 
+// PlayerManager represents the array of pointer of IPlayer
 type PlayerManager []*IPlayer
 
-func (this *PlayerManager) AddPlayer(name string) (string, bool) {
-	if this.FindPlayerByName(name) != -1 {
+// AddPlayer adds a new player into PlayerManager
+func (pManager *PlayerManager) AddPlayer(name string) (string, bool) {
+	if pManager.FindPlayerByName(name) != -1 {
 		return "", true
 	}
 	uuid := uuid.Must(uuid.NewV4()).String()
-	*this = append(*this, &IPlayer {name, uuid, "", nil, WAITING})
+	*pManager = append(*pManager, &IPlayer {name, uuid, "", nil, WAITING})
 	return uuid, false
 }
 
-func (this *PlayerManager) RemovePlayer(id int) {
-	if id >= 0 && id < len(*this) {
-		*this = append((*this)[: id], (*this)[id + 1: ]...)
+// RemovePlayer remove a player from PlayerManager
+func (pManager *PlayerManager) RemovePlayer(id int) {
+	if id >= 0 && id < len(*pManager) {
+		*pManager = append((*pManager)[: id], (*pManager)[id + 1: ]...)
 	}
 }
 
-func (this PlayerManager) FindPlayerByName(name string) int {
-	for index, player := range this {
+// FindPlayerByName gets player's index by player's name
+func (pManager PlayerManager) FindPlayerByName(name string) int {
+	for index, player := range pManager {
 		if player.Name == name {
 			return index
 		}
@@ -63,17 +71,19 @@ func (this PlayerManager) FindPlayerByName(name string) int {
 	return -1
 }
 
-func (this PlayerManager) FindPlayerByUUID(uuid string) int {
-	for index, player := range this {
-		if player.Uuid == uuid {
+// FindPlayerByUUID gets player's index by player's uuid
+func (pManager PlayerManager) FindPlayerByUUID(uuid string) int {
+	for index, player := range pManager {
+		if player.UUID == uuid {
 			return index
 		}
 	}
 	return -1
 }
 
-func (this PlayerManager) FindPlayerBySocket(socket socketio.Socket) int {
-	for index, player := range this {
+// FindPlayerBySocket gets player's index by player's socket
+func (pManager PlayerManager) FindPlayerBySocket(socket socketio.Socket) int {
+	for index, player := range pManager {
 		if (*player.Socket).Id() == socket.Id() {
 			return index
 		}
@@ -81,9 +91,10 @@ func (this PlayerManager) FindPlayerBySocket(socket socketio.Socket) int {
 	return -1
 }
 
-func (this PlayerManager) FindPlayersInRoom(room string) []*IPlayer {
+// FindPlayersInRoom gets list of player which in the same room
+func (pManager PlayerManager) FindPlayersInRoom(room string) []*IPlayer {
 	var list []*IPlayer
-	for _, player := range this {
+	for _, player := range pManager {
 		if player.Room == room {
 			list = append(list, player)
 			if len(list) == 4 {
@@ -94,9 +105,10 @@ func (this PlayerManager) FindPlayersInRoom(room string) []*IPlayer {
 	return list
 }
 
-func (this PlayerManager) FindPlayersIsSameState(state int) []*IPlayer {
+// FindPlayersIsSameState gets list of player which are same state
+func (pManager PlayerManager) FindPlayersIsSameState(state int) []*IPlayer {
 	var list []*IPlayer
-	for _, player := range this {
+	for _, player := range pManager {
 		if player.State == state {
 			list = append(list, player)
 			if len(list) == 4 {
@@ -107,9 +119,10 @@ func (this PlayerManager) FindPlayersIsSameState(state int) []*IPlayer {
 	return list
 }
 
-func (this PlayerManager) Auth(room string, uuid string) bool {
-	for _, player := range this {
-		if player.Room == room && player.Uuid == uuid {
+// Auth authenticates a player
+func (pManager PlayerManager) Auth(room string, uuid string) bool {
+	for _, player := range pManager {
+		if player.Room == room && player.UUID == uuid {
 			return true
 		}
 	}
