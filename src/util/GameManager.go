@@ -64,7 +64,7 @@ func (gManager *GameManager) Logout(socket socketio.Socket) {
 func (gManager *GameManager) Exec() {
 	for {
 		if gManager.WaitingNum() >= 4 {
-			gManager.CreateRoom()
+			go gManager.CreateRoom()
 			time.Sleep(2 * time.Second)
 		} else {
 			time.Sleep(10 * time.Second)
@@ -89,7 +89,8 @@ func (gManager *GameManager) CreateRoom() {
 	gManager.Rooms[roomName] = NewRoom(gManager, roomName)
 	matchPlayer := gManager.Match()
 	gManager.Rooms[roomName].AddPlayer(matchPlayer)
-	go gManager.Rooms[roomName].WaitToStart()
+	gManager.Rooms[roomName].WaitToStart()
+	gManager.RemoveRoom(roomName)
 }
 
 // Match matchs 4 player into a room
@@ -110,19 +111,19 @@ func (gManager *GameManager) Match() []string {
 
 // RemoveRoom removes a room by room name
 func (gManager *GameManager) RemoveRoom(name string) {
-	// if gManager.Rooms[name].Waiting {
-	// 	gManager.Rooms[name].StopWaiting()
-	// }
-	// playerList := gManager.PlayerManager.FindPlayersInRoom(name)
-	// for _, player := range playerList {
-	// 	var index int
-	// 	if gManager.Rooms[name].Waiting {
-	// 		index = gManager.PlayerManager.FindPlayerByUUID(player.UUID)
-	// 		gManager.PlayerManager[index].State = WAITING
-	// 	} else {
-	// 		gManager.PlayerManager.RemovePlayer(index)
-	// 	}
-	// }
+	if gManager.Rooms[name].Waiting {
+		gManager.Rooms[name].StopWaiting()
+	}
+	playerList := gManager.PlayerManager.FindPlayersInRoom(name)
+	for _, player := range playerList {
+		var index int
+		index = gManager.PlayerManager.FindPlayerByUUID(player.UUID)
+		if gManager.Rooms[name].Waiting {
+			gManager.PlayerManager[index].State = WAITING
+		} else {
+			gManager.PlayerManager.RemovePlayer(index)
+		}
+	}
 	delete(gManager.Rooms, name)
 }
 
