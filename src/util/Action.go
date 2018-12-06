@@ -29,12 +29,13 @@ type Action struct {
 // ChangeCard emits to client to get the change cards
 func (player *Player) ChangeCard() []MJCard.Card {
 	defaultChange := MJCard.CardArrayToCards(player.defaultChangeCard()).ToStringArray()
-	waitingTime := 30 * time.Second
-	player.Socket().Emit("change", defaultChange, waitingTime / 1000000)
-	input := make([]interface{}, 3)
+	waitingTime   := 30 * time.Second
+	input         := make([]interface{}, 3)
 	for i:= 0; i < 3; i++ {
 		input[i] = defaultChange[i]
 	}
+
+	player.Socket().Emit("change", defaultChange, waitingTime / 1000000)
 	val := player.waitForSocket("changeCard", input, waitingTime)
 	var changeCards []MJCard.Card
 	for i:= 0; i < 3; i++ {
@@ -49,11 +50,10 @@ func (player *Player) ChangeCard() []MJCard.Card {
 func (player *Player) ChooseLack() int {
 	defaultLack := 0
 	waitingTime := 100 * time.Second
-	player.Socket().Emit("lack", defaultLack, waitingTime / 1000000)
-
-	input := make([]interface{}, 1)
-	input[0] = defaultLack
-	val := player.waitForSocket("chooseLack", input, waitingTime)
+	input       := make([]interface{}, 1)
+	input[0]     = defaultLack
+	go player.Socket().Emit("lack", defaultLack, waitingTime / 1000000)
+	val        := player.waitForSocket("chooseLack", input, waitingTime)
 	player.Lack = val[0].(int)
 	return player.Lack
 }
@@ -62,11 +62,10 @@ func (player *Player) ChooseLack() int {
 func (player *Player) ThrowCard() MJCard.Card {
 	defaultCard := player.Hand.At(0).ToString()
 	waitingTime := 1000 * time.Second
-	player.Socket().Emit("throw", defaultCard, waitingTime / 1000000)
-
-	input := make([]interface{}, 1)
-	input[0] = defaultCard
-	val := player.waitForSocket("chooseLack", input, waitingTime)
+	input       := make([]interface{}, 1)
+	input[0]     = defaultCard
+	go player.Socket().Emit("throw", defaultCard, waitingTime / 1000000)
+	val       := player.waitForSocket("chooseLack", input, waitingTime)
 	throwCard := MJCard.StringToCard(val[0].(string))
 	player.Hand.Sub(throwCard)
 	player.game.Rooms[player.Room()].BroadcastThrow(player.ID, throwCard)
@@ -185,12 +184,11 @@ func (player *Player) Command(cards map[int][]MJCard.Card, command int, from int
 	}
 
 	defaultCommand := Action {NONE, MJCard.Card {Color: -1, Value: 0}, 0}
-	waitingTime := 1000 * time.Second
-	b, _ := json.Marshal(actions)
-	player.Socket().Emit("command", string(b), command, waitingTime / 1000000)
-
-	input := make([]interface{}, 1)
-	input[0] = defaultCommand
+	waitingTime    := 1000 * time.Second
+	b, _           := json.Marshal(actions)
+	input          := make([]interface{}, 1)
+	input[0]        = defaultCommand
+	go player.Socket().Emit("command", string(b), command, waitingTime / 1000000)
 	val := player.waitForSocket("chooseLack", input, waitingTime)
 	return val[0].(Action)
 }

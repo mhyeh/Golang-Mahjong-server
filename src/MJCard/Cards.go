@@ -61,7 +61,7 @@ func (this Cards) Count() uint {
 }
 
 func (this *Cards) Draw() Card {
-	len := this.Count()
+	len    := this.Count()
 	result := this.At(int(rand.Int31n(int32(len))))
 	this.Sub(result)
 	return result
