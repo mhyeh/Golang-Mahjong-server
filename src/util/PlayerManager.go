@@ -23,6 +23,9 @@ type IPlayer struct {
 	State  int
 }
 
+// PlayerManager represents the array of pointer of IPlayer
+type PlayerManager []*IPlayer
+
 // GetNameList returns the list of player's name
 func GetNameList(list []*IPlayer) []string {
 	var nameList []string
@@ -40,9 +43,6 @@ func GetUUIDList(list []IPlayer) []string {
 	}
 	return uuidList
 }
-
-// PlayerManager represents the array of pointer of IPlayer
-type PlayerManager []*IPlayer
 
 // AddPlayer adds a new player into PlayerManager
 func (pManager *PlayerManager) AddPlayer(name string) (string, bool) {
