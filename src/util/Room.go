@@ -97,8 +97,10 @@ func (room *Room) Accept(uuid string, callback func(int)) {
 	}
 	player := room.game.PlayerManager[index]
 	room.BroadcastReady(player.Name)
-	callback(room.NumPlayer())
-	room.Players = append(room.Players, NewPlayer(room.game, room.NumPlayer(), player.UUID))
+	id := room.NumPlayer()
+	callback(id)
+	player.Index = id
+	room.Players = append(room.Players, NewPlayer(room.game, id, player.UUID))
 	room.game.PlayerManager[index].State = READY
 }
 
