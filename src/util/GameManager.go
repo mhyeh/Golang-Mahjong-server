@@ -54,8 +54,9 @@ func (gManager *GameManager) Exec() {
 	for {
 		if gManager.WaitingNum() >= 4 {
 			go gManager.CreateRoom()
+			time.Sleep(2 * time.Second)
 		}
-		time.Sleep(0)
+		time.Sleep(5 * time.Second)
 	}
 }
 

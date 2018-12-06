@@ -20,15 +20,11 @@ func (room *Room) init() {
 	room.DiscardTiles = MJCard.NewCards(false)
 	room.HuTiles      = MJCard.NewCards(false)
 
-	len := room.Deck.Count()
 	for _, player := range room.Players {
 		player.Init()
 		for j := 0; j < 13; j++ {
-			idx    := rand.Int31n(int32(len))
-			result := room.Deck.At(int(idx))
-			room.Deck.Sub(result)
+			result := room.Deck.Draw()
 			player.Hand.Add(result)
-			len--
 		}
 		player.Socket().Emit("dealCard", player.Hand.ToStringArray())
 	}
