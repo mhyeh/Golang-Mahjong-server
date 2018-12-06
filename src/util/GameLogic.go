@@ -52,8 +52,6 @@ func (room *Room) changeCard() {
 		tmp[(i + offset[rand]) % 4] = room.ChangedTiles[i]
 	}
 
-	println(rand)
-
 	for i := 0; i < 4; i++ {
 		room.Players[i].Hand.Add(tmp[i])
 		t := MJCard.CardArrayToCards(tmp[i])
@@ -119,7 +117,7 @@ func (room *Room) checkOthers(currentID int, throwCard MJCard.Card, huIdx *int, 
 			waitGroup.Done()
 		} else {
 			go func(id int) {
-				playerCommand[id] = otherPlayer.OnCommand(actions, command, ((4 + currentID - otherPlayer.ID()) % 4))
+				playerCommand[id] = otherPlayer.Command(actions, command, ((4 + currentID - otherPlayer.ID) % 4))
 				waitGroup.Done()
 			}(i)
 		}
@@ -171,17 +169,11 @@ func (room *Room) huUnder2() bool {
 	for i := 0; i < 4; i++ {
 		if room.Players[i].IsHu {
 			count++
+		} else {
+			room.Players[i].IsTing = room.Players[i].CheckTing(&room.Players[i].MaxTai)
 		}
 	}
-	if count <= 2 {
-		for i := 0; i < 4; i++ {
-			if !room.Players[i].IsHu {
-				room.Players[i].IsTing = room.Players[i].CheckTing(&room.Players[i].MaxTai)
-			}
-		}
-		return true;
-	}
-	return false;
+	return count <= 2;
 }
 
 func (room *Room) lackPenalty() {
