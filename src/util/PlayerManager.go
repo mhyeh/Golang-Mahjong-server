@@ -21,6 +21,7 @@ type IPlayer struct {
 	Room   string
 	Socket *socketio.Socket
 	State  int
+	Index  int
 }
 
 // PlayerManager represents the array of pointer of IPlayer
@@ -56,7 +57,7 @@ func (pManager *PlayerManager) AddPlayer(name string) (string, bool) {
 			break
 		}
 	}
-	*pManager = append(*pManager, &IPlayer {name, _uuid, "", nil, WAITING})
+	*pManager = append(*pManager, &IPlayer {name, _uuid, "", nil, WAITING, -1})
 	return _uuid, false
 }
 
