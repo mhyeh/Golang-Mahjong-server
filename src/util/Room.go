@@ -12,7 +12,7 @@ import (
 
 // NewRoom creates a new room
 func NewRoom(game *GameManager, name string) *Room {
-	return &Room {game: game, name: name, Waiting: false}
+	return &Room {game: game, Name: name, Waiting: false}
 }
 
 // Room represents a round of mahjong
@@ -24,22 +24,14 @@ type Room struct {
 	DiscardTiles MJCard.Cards
 	HuTiles      MJCard.Cards
 	Waiting      bool
-
 	IO           *socketio.Server
-	
 	game         *GameManager
-
-	name         string
-}
-
-// Name returns the room name
-func (room Room) Name() string {
-	return room.name
+	Name         string
 }
 
 // NumPlayer returns the number of player in the room
 func (room Room) NumPlayer() int {
-	list := room.game.PlayerManager.FindPlayersInRoom(room.name)
+	list := room.game.PlayerManager.FindPlayersInRoom(room.Name)
 	num := 0
 	for _, player := range list {
 		if (player.State & (READY | PLAYING)) != 0 {
@@ -53,12 +45,12 @@ func (room Room) NumPlayer() int {
 func (room *Room) AddPlayer(playerList []string) {
 	for _, uuid := range playerList {
 		index := room.game.PlayerManager.FindPlayerByUUID(uuid)
-		room.game.PlayerManager[index].Room = room.name
+		room.game.PlayerManager[index].Room = room.Name
 	}
-	list := room.game.PlayerManager.FindPlayersInRoom(room.name)
+	list := room.game.PlayerManager.FindPlayersInRoom(room.Name)
 	nameList := GetNameList(list)
 	for _, player := range list {
-		(*player.Socket).Emit("readyToStart", room.name, nameList)
+		(*player.Socket).Emit("readyToStart", room.Name, nameList)
 	}
 }
 
@@ -108,7 +100,6 @@ func (room *Room) Accept(uuid string, callback func(int)) {
 	callback(room.NumPlayer())
 	room.Players = append(room.Players, NewPlayer(room.game, room.NumPlayer(), player.UUID))
 	room.game.PlayerManager[index].State = READY
-	return
 }
 
 // GetPlayerList returns the list of player's name
@@ -166,7 +157,7 @@ func (room *Room) Run() {
 					cards := make(map[int][]MJCard.Card)
 					cards[HU] = append(cards[HU], action.Card)
 					go func (i int) {
-						actionSet[i] = room.Players[i].OnCommand(cards, HU, (4 + currentID - id) % 4)
+						actionSet[i] = room.Players[i].Command(cards, HU, (4 + currentID - id) % 4)
 						waitGroup.Done()
 					}(i)
 				} else {

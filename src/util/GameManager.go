@@ -10,15 +10,15 @@ import (
 
 // NewGameManager creates a new gameManager
 func NewGameManager() GameManager {
-	rooms := make(map[string]*Room)
 	var playerManager PlayerManager
-	game := GameManager {rooms, playerManager}
+	rooms := make(map[string]*Room)
+	game  := GameManager {rooms, playerManager}
 	return game
 }
 
 // GameManager represents a gameManager
 type GameManager struct {
-	Rooms map[string]*Room
+	Rooms         map[string]*Room
 	PlayerManager PlayerManager
 }
 
@@ -54,10 +54,8 @@ func (gManager *GameManager) Exec() {
 	for {
 		if gManager.WaitingNum() >= 4 {
 			go gManager.CreateRoom()
-			time.Sleep(2 * time.Second)
-		} else {
-			time.Sleep(10 * time.Second)
 		}
+		time.Sleep(0)
 	}
 }
 
@@ -69,7 +67,7 @@ func (gManager *GameManager) WaitingNum() int {
 // CreateRoom creates a new room and add player to that room
 func (gManager *GameManager) CreateRoom() {
 	var roomName string
-	for ;; {
+	for {
 		roomName = uuid.Must(uuid.NewV4()).String()
 		if gManager.Rooms[roomName] == nil {
 			break
