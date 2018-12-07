@@ -6,45 +6,45 @@ import (
 
 	"github.com/googollee/go-socket.io";
 	"github.com/satori/go.uuid";
+
+	"PManager"
 )
 
 // NewGameManager creates a new gameManager
 func NewGameManager() GameManager {
-	var playerManager PlayerManager
 	rooms := make(map[string]*Room)
-	game  := GameManager {rooms, playerManager}
+	game  := GameManager {rooms}
 	return game
 }
 
 // GameManager represents a gameManager
 type GameManager struct {
-	Rooms         map[string]*Room
-	PlayerManager PlayerManager
+	Rooms map[string]*Room
 }
 
 // Login handles player's login
 func (gManager *GameManager) Login(name string, socket socketio.Socket) (string, bool) {
-	uuid, err := gManager.PlayerManager.AddPlayer(name)
+	uuid, err := PManager.AddPlayer(name)
 	if err {
 		return "", true
 	}
-	index := gManager.PlayerManager.FindPlayerByUUID(uuid)
-	gManager.PlayerManager[index].Socket = &socket
-	gManager.PlayerManager[index].State  = WAITING
+	index := PManager.FindPlayerByUUID(uuid)
+	PManager.Players[index].Socket = &socket
+	PManager.Players[index].State  = PManager.WAITING
 
 	return uuid, false
 }
 
 // Logout handles player's logout
 func (gManager *GameManager) Logout(socket socketio.Socket) {
-	index := gManager.PlayerManager.FindPlayerBySocket(socket)
-	if index >= 0 && index < len(gManager.PlayerManager) {
-		if gManager.PlayerManager[index].State == WAITING {
-			gManager.PlayerManager.RemovePlayer(index)
+	index := PManager.FindPlayerBySocket(socket)
+	if index >= 0 && index < len(PManager.Players) {
+		if PManager.Players[index].State == PManager.WAITING {
+			PManager.RemovePlayer(index)
 		} 
-		// else if gManager.PlayerManager[index].State == MATCHED {
-		// 	gManager.RemoveRoom(gManager.PlayerManager[index].Room)
-		// 	gManager.PlayerManager.RemovePlayer(index)
+		// else if PManager.Players[index].State == MATCHED {
+		// 	gManager.RemoveRoom(PManager.Players[index].Room)
+		// 	RemovePlayer(index)
 		// }
 	}
 }
@@ -62,7 +62,7 @@ func (gManager *GameManager) Exec() {
 
 // WaitingNum returns the number of player which state are waiting
 func (gManager *GameManager) WaitingNum() int {
-	return len(gManager.PlayerManager.FindPlayersIsSameState(WAITING))
+	return len(PManager.FindPlayersIsSameState(PManager.WAITING))
 }
 
 // CreateRoom creates a new room and add player to that room
@@ -74,27 +74,11 @@ func (gManager *GameManager) CreateRoom() {
 			break
 		}
 	}
-	gManager.Rooms[roomName] = NewRoom(gManager, roomName)
+	gManager.Rooms[roomName] = NewRoom(roomName)
 	matchPlayer := gManager.Match()
 	gManager.Rooms[roomName].AddPlayer(matchPlayer)
 	gManager.Rooms[roomName].WaitToStart()
 	gManager.RemoveRoom(roomName)
-}
-
-// Match matchs 4 player into a room
-func (gManager *GameManager) Match() []string {
-	waitingList := gManager.PlayerManager.FindPlayersIsSameState(WAITING)
-	var sample []string
-	for i := 0; i < 4; i++ {
-		index := rand.Int31n(int32(len(waitingList)))
-		sample = append(sample, waitingList[index].UUID)
-		waitingList = append(waitingList[: index], waitingList[index + 1: ]...)
-	}
-	for _, uuid := range sample {
-		index := gManager.PlayerManager.FindPlayerByUUID(uuid)
-		gManager.PlayerManager[index].State = MATCHED
-	}
-	return sample
 }
 
 // RemoveRoom removes a room by room name
@@ -102,15 +86,31 @@ func (gManager *GameManager) RemoveRoom(name string) {
 	if gManager.Rooms[name].Waiting {
 		gManager.Rooms[name].StopWaiting()
 	}
-	playerList := gManager.PlayerManager.FindPlayersInRoom(name)
+	playerList := PManager.FindPlayersInRoom(name)
 	for _, player := range playerList {
 		var index int
-		index = gManager.PlayerManager.FindPlayerByUUID(player.UUID)
+		index = PManager.FindPlayerByUUID(player.UUID)
 		if gManager.Rooms[name].Waiting {
-			gManager.PlayerManager[index].State = WAITING
+			PManager.Players[index].State = PManager.WAITING
 		} else {
-			gManager.PlayerManager.RemovePlayer(index)
+			PManager.RemovePlayer(index)
 		}
 	}
 	delete(gManager.Rooms, name)
+}
+
+// Match matchs 4 player into a room
+func (gManager *GameManager) Match() []string {
+	waitingList := PManager.FindPlayersIsSameState(PManager.WAITING)
+	var sample []string
+	for i := 0; i < 4; i++ {
+		index := rand.Int31n(int32(len(waitingList)))
+		sample = append(sample, waitingList[index].UUID)
+		waitingList = append(waitingList[: index], waitingList[index + 1: ]...)
+	}
+	for _, uuid := range sample {
+		index := PManager.FindPlayerByUUID(uuid)
+		PManager.Players[index].State = PManager.MATCHED
+	}
+	return sample
 }

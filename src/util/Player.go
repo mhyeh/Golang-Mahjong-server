@@ -4,11 +4,12 @@ import (
 	"github.com/googollee/go-socket.io"
 
 	"MJCard"
+	"PManager"
 )
 
 // NewPlayer creates a new player
-func NewPlayer(game *GameManager, id int, uuid string) *Player {
-	return &Player{game: game, ID: id, UUID: uuid}
+func NewPlayer(room *Room, id int, uuid string) *Player {
+	return &Player{room: room, ID: id, UUID: uuid}
 }
 
 // Player represents a player in mahjong
@@ -26,31 +27,31 @@ type Player struct {
 	JustGon      bool
 	ID           int
 	UUID         string
-	game         *GameManager
+	room         *Room
 }
 
 // Name returns the player's name
 func (player Player) Name() string {
-	index := player.game.PlayerManager.FindPlayerByUUID(player.UUID)
-	return player.game.PlayerManager[index].Name
+	index := PManager.FindPlayerByUUID(player.UUID)
+	return PManager.Players[index].Name
 }
 
 // Room returns the player's room
 func (player Player) Room() string {
-	index := player.game.PlayerManager.FindPlayerByUUID(player.UUID)
-	return player.game.PlayerManager[index].Room
+	index := PManager.FindPlayerByUUID(player.UUID)
+	return PManager.Players[index].Room
 }
 
 // Socket returns the player's socket
 func (player Player) Socket() socketio.Socket {
-	index := player.game.PlayerManager.FindPlayerByUUID(player.UUID)
-	return *player.game.PlayerManager[index].Socket
+	index := PManager.FindPlayerByUUID(player.UUID)
+	return *PManager.Players[index].Socket
 }
 
 // Init inits the player's state
 func (player *Player) Init() {
-	index := player.game.PlayerManager.FindPlayerByUUID(player.UUID)
-	player.game.PlayerManager[index].State = PLAYING
+	index := PManager.FindPlayerByUUID(player.UUID)
+	PManager.Players[index].State = PManager.PLAYING
 	for i := 0; i < 3; i++ {
 		player.Door[i]         = 0
 		player.VisiableDoor[i] = 0
