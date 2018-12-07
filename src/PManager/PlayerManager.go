@@ -5,7 +5,7 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-// player's state
+// Player's state
 const (
 	WAITING = 0
 	MATCHED = 1

@@ -30,16 +30,12 @@ type Action struct {
 func (player *Player) ChangeCard() []MJCard.Card {
 	defaultChange := MJCard.CardArrayToCards(player.defaultChangeCard()).ToStringArray()
 	waitingTime   := 30 * time.Second
-	input         := make([]interface{}, 3)
-	for i:= 0; i < 3; i++ {
-		input[i] = defaultChange[i]
-	}
-
 	player.Socket().Emit("change", defaultChange, waitingTime / 1000000)
-	val := player.waitForSocket("changeCard", input, waitingTime)
+	val := player.waitForSocket("changeCard", defaultChange, waitingTime)
+	valArr := val.([]interface{})
 	var changeCards []MJCard.Card
 	for i:= 0; i < 3; i++ {
-		changeCards = append(changeCards, MJCard.StringToCard(val[i].(string)))
+		changeCards = append(changeCards, MJCard.StringToCard(valArr[i].(string)))
 	}
 	player.Hand.Sub(changeCards)
 	player.room.BroadcastChange(player.ID)
@@ -48,13 +44,11 @@ func (player *Player) ChangeCard() []MJCard.Card {
 
 // ChooseLack emits to client to get the choose lack
 func (player *Player) ChooseLack() int {
-	defaultLack := 0
+	defaultLack := float64(0)
 	waitingTime := 10 * time.Second
-	input       := make([]interface{}, 1)
-	input[0]     = defaultLack
 	go player.Socket().Emit("lack", defaultLack, waitingTime / 1000000)
-	val        := player.waitForSocket("chooseLack", input, waitingTime)
-	player.Lack = val[0].(int)
+	val        := player.waitForSocket("chooseLack", defaultLack, waitingTime)
+	player.Lack = int(val.(float64))
 	return player.Lack
 }
 
@@ -62,11 +56,9 @@ func (player *Player) ChooseLack() int {
 func (player *Player) ThrowCard() MJCard.Card {
 	defaultCard := player.Hand.At(0).ToString()
 	waitingTime := 10 * time.Second
-	input       := make([]interface{}, 1)
-	input[0]     = defaultCard
 	go player.Socket().Emit("throw", defaultCard, waitingTime / 1000000)
-	val       := player.waitForSocket("chooseLack", input, waitingTime)
-	throwCard := MJCard.StringToCard(val[0].(string))
+	val       := player.waitForSocket("throwCard", defaultCard, waitingTime)
+	throwCard := MJCard.StringToCard(val.(string))
 	player.Hand.Sub(throwCard)
 	player.room.BroadcastThrow(player.ID, throwCard)
 	return throwCard
@@ -115,14 +107,20 @@ func (player *Player) Command(cards map[int][]MJCard.Card, command int) Action {
 		actions = append(actions, actionSet)
 	}
 
-	defaultCommand := Action {NONE, MJCard.Card {Color: -1, Value: 0}, 0}
+	type Act struct {
+		Command int
+		Card    string
+		Score   int
+	}
+	defaultCommand := Act {NONE, "c0", 0}
 	waitingTime    := 10 * time.Second
-	b, _           := json.Marshal(actions)
-	input          := make([]interface{}, 1)
-	input[0]        = defaultCommand
-	go player.Socket().Emit("command", string(b), command, waitingTime / 1000000)
-	val := player.waitForSocket("chooseLack", input, waitingTime)
-	return val[0].(Action)
+	actionJSON, _  := json.Marshal(actions)
+	commandJSON, _ := json.Marshal(defaultCommand)
+	go player.Socket().Emit("command", string(actionJSON), command, waitingTime / 1000000)
+	val := player.waitForSocket("sendCommand", string(commandJSON), waitingTime)
+	var t Act
+	json.Unmarshal([]byte(val.(string)), &t)
+	return Action {Command: t.Command, Card: MJCard.StringToCard(t.Card), Score: 0}
 }
 
 // OnFail emits to client to notice the command is failed
@@ -152,11 +150,11 @@ func (player *Player) defaultChangeCard() []MJCard.Card {
 	return result;
 }
 
-func (player *Player) waitForSocket(eventName string, defaultValue []interface{}, waitingTime time.Duration) []interface{} {
-	c := make(chan []interface{}, 1)
-	var val []interface{}
+func (player *Player) waitForSocket(eventName string, defaultValue interface{}, waitingTime time.Duration) interface{} {
+	c := make(chan interface{}, 1)
+	var val interface{}
 	go func() {
-		player.Socket().On(eventName, func(v []interface{}) {
+		player.Socket().On(eventName, func(v interface{}) {
 			c<-v
 		})
 	}()
@@ -246,7 +244,7 @@ func (player *Player) procCommand(drawCard MJCard.Card, action *Action, tai int)
 
 func (player *Player) ziMo(action *Action, tai int) {
 	player.IsHu = true
-	player.HuCards.Add(action.Card)
+	player.HuTiles.Add(action.Card)
 	player.room.HuTiles.Add(action.Card)
 	player.Hand.Sub(action.Card)
 	Tai := tai + 1

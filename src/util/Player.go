@@ -21,7 +21,8 @@ type Player struct {
 	Hand         MJCard.Cards
 	Door         MJCard.Cards
 	VisiableDoor MJCard.Cards
-	HuCards      MJCard.Cards
+	HuTiles      MJCard.Cards
+	DiscardTiles MJCard.Cards
 	IsHu         bool
 	IsTing       bool
 	JustGon      bool
@@ -56,8 +57,9 @@ func (player *Player) Init() {
 		player.Door[i]         = 0
 		player.VisiableDoor[i] = 0
 		player.Hand[i]         = 0
-		player.HuCards[i]      = 0
+		player.HuTiles[i]      = 0
 		player.GonRecord[i]    = 0
+		player.DiscardTiles[i] = 0
 	}
 
 	player.Credit  = 0
