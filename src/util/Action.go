@@ -42,14 +42,14 @@ func (player *Player) ChangeCard() []MJCard.Card {
 		changeCards = append(changeCards, MJCard.StringToCard(val[i].(string)))
 	}
 	player.Hand.Sub(changeCards)
-	player.game.Rooms[player.Room()].BroadcastChange(player.ID)
+	player.room.BroadcastChange(player.ID)
 	return changeCards
 }
 
 // ChooseLack emits to client to get the choose lack
 func (player *Player) ChooseLack() int {
 	defaultLack := 0
-	waitingTime := 100 * time.Second
+	waitingTime := 10 * time.Second
 	input       := make([]interface{}, 1)
 	input[0]     = defaultLack
 	go player.Socket().Emit("lack", defaultLack, waitingTime / 1000000)
@@ -61,47 +61,27 @@ func (player *Player) ChooseLack() int {
 // ThrowCard emits to client to get the throw card
 func (player *Player) ThrowCard() MJCard.Card {
 	defaultCard := player.Hand.At(0).ToString()
-	waitingTime := 1000 * time.Second
+	waitingTime := 10 * time.Second
 	input       := make([]interface{}, 1)
 	input[0]     = defaultCard
 	go player.Socket().Emit("throw", defaultCard, waitingTime / 1000000)
 	val       := player.waitForSocket("chooseLack", input, waitingTime)
 	throwCard := MJCard.StringToCard(val[0].(string))
 	player.Hand.Sub(throwCard)
-	player.game.Rooms[player.Room()].BroadcastThrow(player.ID, throwCard)
+	player.room.BroadcastThrow(player.ID, throwCard)
 	return throwCard
 }
 
 // Draw draws a card
 func (player *Player) Draw(drawCard MJCard.Card) Action {
-	actions := make(map[int][]MJCard.Card)
-	tai     := 0
-	command := 0
 	player.Hand.Add(drawCard)
 	player.Socket().Emit("draw", drawCard.ToString())
 
-	if player.CheckHu(MJCard.Card {Color: -1, Value: 0}, &tai) {
-		command |= ZIMO
-		actions[ZIMO] = append(actions[ZIMO], drawCard)
-	}
-	for c := 0; c < 3; c++ {
-		for v :=uint(0); v < 9; v++ {
-			tmpCard := MJCard.Card {Color: c, Value: v}
-			if player.Hand[c].GetIndex(v) == 4 {
-				if player.CheckGon(tmpCard) {
-					command |= ONGON
-					actions[ONGON] = append(actions[ONGON], tmpCard)
-				}
-			} else if player.Hand[c].GetIndex(v) == 1 && player.Door[c].GetIndex(v) == 3 {
-				if player.CheckGon(tmpCard) {
-					command |= PONGON
-					actions[PONGON] = append(actions[PONGON], tmpCard)
-				}
-			}
-		}
-	}
+	var tai int
+	player.CheckHu(MJCard.Card {Color: -1, Value: 0}, &tai)
+	actions, command := player.getAvaliableAction(true, drawCard, tai)
+	action           := Action {NONE, drawCard, 0}
 
-	action := Action {NONE, drawCard, 0}
 	if command == NONE {
 		action.Command = NONE
 		action.Card    = drawCard
@@ -115,63 +95,15 @@ func (player *Player) Draw(drawCard MJCard.Card) Action {
 		}
 		action.Card = actions[action.Command][0]
 	} else {
-		action = player.Command(actions, command, 0)
+		action = player.Command(actions, command)
 	}
 
-	if (action.Command & ZIMO) != 0 {
-		player.IsHu = true
-		player.HuCards.Add(action.Card)
-		player.game.Rooms[player.Room()].HuTiles.Add(action.Card)
-		player.Hand.Sub(action.Card)
-		Tai := tai + 1
-		if player.JustGon {
-			Tai++ 
-		}
-		score := int(math.Pow(2, float64(Tai)))
-		action.Score = score
-		for i := 0; i < 4; i++ {
-			if player.ID != i {
-				player.Credit += score
-				if player.MaxTai < tai {
-					player.MaxTai = tai
-				}
-				player.game.Rooms[player.Room()].Players[i].Credit -= score
-			}
-		}
-	} else if (action.Command & ONGON) != 0 {
-		player.Gon(action.Card, false)
-		action.Score = 2
-		for i := 0; i < 4; i++ {
-			if i != player.ID {
-				player.Credit += 2
-				player.GonRecord[i] += 2
-				player.game.Rooms[player.Room()].Players[i].Credit -= 2
-			}
-		}
-	} else if (action.Command & PONGON) != 0 {
-		player.Gon(action.Card, true)
-		action.Score = 1
-		for i := 0; i < 4; i++ {
-			if i != player.ID {
-				player.Credit++
-				player.GonRecord[i]++
-				player.game.Rooms[player.Room()].Players[i].Credit--
-			}
-		}
-	} else {
-		if player.IsHu {
-			action.Card = drawCard
-			player.game.Rooms[player.Room()].BroadcastThrow(player.ID, drawCard)
-		} else {
-			action.Card = player.ThrowCard()
-		}
-		player.Hand.Sub(action.Card)
-	}
+	player.procCommand(drawCard, &action, tai)
 	return action
 }
 
 // Command emits to client to get command
-func (player *Player) Command(cards map[int][]MJCard.Card, command int, from int) Action {
+func (player *Player) Command(cards map[int][]MJCard.Card, command int) Action {
 	type ActionSet struct {
 		Key   int
 		Value []string
@@ -184,7 +116,7 @@ func (player *Player) Command(cards map[int][]MJCard.Card, command int, from int
 	}
 
 	defaultCommand := Action {NONE, MJCard.Card {Color: -1, Value: 0}, 0}
-	waitingTime    := 1000 * time.Second
+	waitingTime    := 10 * time.Second
 	b, _           := json.Marshal(actions)
 	input          := make([]interface{}, 1)
 	input[0]        = defaultCommand
@@ -201,7 +133,7 @@ func (player *Player) OnFail(command int) {
 // OnSuccess emits to client to notice the command is successed
 func (player *Player) OnSuccess(from int, command int, card MJCard.Card, score int) {
 	player.Socket().Emit("success", from, command, card.ToString(), score)
-	player.game.Rooms[player.Room()].BroadcastCommand(from, player.ID, command, card, score)
+	player.room.BroadcastCommand(from, player.ID, command, card, score)
 }
 
 func (player *Player) defaultChangeCard() []MJCard.Card {
@@ -235,3 +167,125 @@ func (player *Player) waitForSocket(eventName string, defaultValue []interface{}
 	}
 	return val
 }
+
+func (player *Player) getAvaliableAction(isDraw bool, card MJCard.Card, tai int) (map[int][]MJCard.Card, int) {
+	actions := make(map[int][]MJCard.Card)
+	command := 0
+
+	if isDraw {
+		actions, command = player.checkDrawAction(card, tai)
+	} else {
+		actions, command = player.checkNonDrawAction(card, tai)
+	}
+	return actions, command
+}
+
+func (player *Player) checkDrawAction(card MJCard.Card, tai int) (map[int][]MJCard.Card, int) {
+	actions := make(map[int][]MJCard.Card)
+	command := 0
+	if tai > 0 {
+		command |= ZIMO
+		actions[ZIMO] = append(actions[ZIMO], card)
+	}
+	for c := 0; c < 3; c++ {
+		for v :=uint(0); v < 9; v++ {
+			tmpCard := MJCard.Card {Color: c, Value: v}
+			if player.Hand[c].GetIndex(v) == 4 {
+				if player.CheckGon(tmpCard) {
+					command |= ONGON
+					actions[ONGON] = append(actions[ONGON], tmpCard)
+				}
+			} else if player.Hand[c].GetIndex(v) == 1 && player.Door[c].GetIndex(v) == 3 {
+				if player.CheckGon(tmpCard) {
+					command |= PONGON
+					actions[PONGON] = append(actions[PONGON], tmpCard)
+				}
+			}
+		}
+	}
+	return actions, command
+}
+
+func (player *Player) checkNonDrawAction(card MJCard.Card, tai int) (map[int][]MJCard.Card, int) {
+	actions := make(map[int][]MJCard.Card)
+	command := 0
+	if tai > 0 {
+		command |= HU
+		actions[HU] = append(actions[HU], card)
+	}
+	if player.Hand[card.Color].GetIndex(card.Value) == 3 {
+		if player.CheckGon(card) {
+			command |= GON
+			actions[GON] = append(actions[GON], card)
+		}
+	}
+	if player.CheckPon(card) {
+		command |= PON
+		actions[PON] = append(actions[PON], card)
+	}
+	return actions, command
+}
+
+func (player *Player) procCommand(drawCard MJCard.Card, action *Action, tai int) {
+	if (action.Command & ZIMO) != 0 {
+		player.ziMo(action, tai)
+	} else if (action.Command & ONGON) != 0 {
+		player.onGon(action)
+	} else if (action.Command & PONGON) != 0 {
+		player.onGon(action)
+	} else {
+		if player.IsHu {
+			action.Card = drawCard
+			player.room.BroadcastThrow(player.ID, drawCard)
+		} else {
+			action.Card = player.ThrowCard()
+		}
+		player.Hand.Sub(action.Card)
+	}
+}
+
+func (player *Player) ziMo(action *Action, tai int) {
+	player.IsHu = true
+	player.HuCards.Add(action.Card)
+	player.room.HuTiles.Add(action.Card)
+	player.Hand.Sub(action.Card)
+	Tai := tai + 1
+	if player.JustGon {
+		Tai++ 
+	}
+	score := int(math.Pow(2, float64(Tai)))
+	action.Score = score
+	for i := 0; i < 4; i++ {
+		if player.ID != i {
+			player.Credit += score
+			if player.MaxTai < tai {
+				player.MaxTai = tai
+			}
+			player.room.Players[i].Credit -= score
+		}
+	}
+} 
+
+func (player *Player) onGon(action *Action) {
+	player.Gon(action.Card, false)
+	action.Score = 2
+	for i := 0; i < 4; i++ {
+		if i != player.ID {
+			player.Credit += 2
+			player.GonRecord[i] += 2
+			player.room.Players[i].Credit -= 2
+		}
+	}
+} 
+
+func (player *Player) ponGon(action *Action) {
+	player.Gon(action.Card, true)
+	action.Score = 1
+	for i := 0; i < 4; i++ {
+		if i != player.ID {
+			player.Credit++
+			player.GonRecord[i]++
+			player.room.Players[i].Credit--
+		}
+	}
+} 

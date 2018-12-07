@@ -5,6 +5,7 @@ import (
 	"sync"
 	"math"
 	"encoding/json"
+	"time"
 
 	"MJCard"
 )
@@ -13,6 +14,15 @@ import (
 type GameResult struct {
 	Hand  []string
 	Score int
+}
+
+func (room *Room) preproc() {
+	time.Sleep(2 * time.Second)
+	room.init()
+	time.Sleep(3 * time.Second)
+	room.changeCard()
+	time.Sleep(5 * time.Second)
+	room.chooseLack()
 }
 
 func (room *Room) init() {
@@ -68,39 +78,81 @@ func (room *Room) chooseLack() {
 	room.BroadcastLack()
 }
 
+func (room *Room) checkAction(currentID int, action Action, throwCard MJCard.Card) (bool, int, int, int) {
+	ponIdx, gonIdx, huIdx := -1, -1, -1
+	fail                  := false
+
+	if (action.Command & PONGON) != 0 {
+		fail = room.checkRobGon(currentID, action.Card, &huIdx)
+	} else if (action.Command & ZIMO) == 0 && (action.Command & ONGON) == 0 {
+		room.checkOthers(currentID, throwCard, &huIdx, &gonIdx, &ponIdx)
+	}
+
+	return fail, huIdx, gonIdx, ponIdx
+}
+
+func (room *Room) checkRobGon(currentID int, gonCard MJCard.Card, huIdx *int) bool {
+	var waitGroup sync.WaitGroup
+	var actionSet [3]Action
+	waitGroup.Add(3)
+	for i := 1; i < 4; i++ {
+		id := (i + currentID) % 4;
+		tai := 0
+		if room.Players[id].CheckHu(gonCard, &tai) {
+			cards    := make(map[int][]MJCard.Card)
+			cards[HU] = append(cards[HU], gonCard)
+			go func (i int) {
+				actionSet[i - 1] = room.Players[i].Command(cards, HU)
+				waitGroup.Done()
+			}(i)
+		} else {
+			waitGroup.Done()
+		}
+	}
+	waitGroup.Wait()
+	return room.robGon(currentID, actionSet, gonCard, huIdx)
+}
+
+func (room *Room) robGon(currentID int, actionSet [3]Action, huCard MJCard.Card, huIdx *int) bool {
+	fail      := false
+	curPlayer := room.Players[currentID]
+	for i := 1; i < 4; i++ {
+		id  := (i + currentID) % 4
+		act := actionSet[i - 1]
+		if (act.Command & HU) != 0 {
+			tai := 0
+			room.Players[id].CheckHu(huCard, &tai)
+			score := int(math.Pow(2, float64(tai)))
+			curPlayer.Credit        -= score
+			room.Players[id].Credit += score
+			room.Players[id].HuCards.Add(huCard)
+			room.Players[id].OnSuccess(currentID, HU, huCard, score)
+			if !fail {
+				curPlayer.Door.Sub(huCard)
+				curPlayer.VisiableDoor.Sub(huCard)
+				room.HuTiles.Add(huCard)
+			}
+			*huIdx = id
+			fail = true
+		}
+	}
+	return fail
+}
+
 func (room *Room) checkOthers(currentID int, throwCard MJCard.Card, huIdx *int, gonIdx *int, ponIdx *int) {
 	action := Action {NONE, throwCard, 0}
-	var playerCommand [4]Action
+	var playerCommand [3]Action
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(3)
-	playerCommand[0] = action
 	for i := 1; i < 4; i++ {
-		id := (i + currentID) % 4
-		actions := make(map[int][]MJCard.Card)
-		otherPlayer := room.Players[id]
+		otherPlayer := room.Players[(i + currentID) % 4]
+		tai         := 0
 
-		command := 0
-		tai     := 0
-		if otherPlayer.CheckHu(throwCard, &tai) {
-			command |= HU
-			actions[HU] = append(actions[HU], throwCard)
-		}
-
-		if otherPlayer.Hand[throwCard.Color].GetIndex(throwCard.Value) == 3 {
-			if otherPlayer.CheckGon(throwCard) {
-				command |= GON
-				actions[GON] = append(actions[GON], throwCard)
-			}
-		}
-
-		if otherPlayer.CheckPon(throwCard) {
-			command |= PON
-			actions[PON] = append(actions[PON], throwCard)
-		}
-
+		otherPlayer.CheckHu(throwCard, &tai)
+		actions, command := otherPlayer.getAvaliableAction(false, throwCard, tai)
 		if command == NONE {
-			action.Command = NONE
-			playerCommand[i] = action
+			action.Command       = NONE
+			playerCommand[i - 1] = action
 			waitGroup.Done()
 		} else if otherPlayer.IsHu {
 			if (command & HU) != 0 {
@@ -108,22 +160,22 @@ func (room *Room) checkOthers(currentID int, throwCard MJCard.Card, huIdx *int, 
 			} else if (command & GON) != 0 {
 				action.Command = GON
 			}
-			action.Card = throwCard
-			playerCommand[i] = action
+			action.Card          = throwCard
+			playerCommand[i - 1] = action
 			waitGroup.Done()
 		} else {
-			go func(id int) {
-				playerCommand[id] = otherPlayer.Command(actions, command, ((4 + currentID - otherPlayer.ID) % 4))
+			go func(i int) {
+				playerCommand[i - 1] = otherPlayer.Command(actions, command)
 				waitGroup.Done()
 			}(i)
 		}
 	}
 	waitGroup.Wait()
 	for i := 1; i < 4; i++ {
-		playerID := (i + currentID) % 4
+		playerID    := (i + currentID) % 4
 		otherPlayer := room.Players[playerID]
-		action = playerCommand[i]
-		tai := 0
+		tai         := 0
+		action       = playerCommand[i - 1]
 		otherPlayer.CheckHu(throwCard, &tai)
 
 		if (action.Command & HU) != 0 {
@@ -158,6 +210,53 @@ func (room *Room) checkOthers(currentID int, throwCard MJCard.Card, huIdx *int, 
 			}
 		}
 	}
+}
+
+func (room *Room) doAction(currentID int, throwCard MJCard.Card, huIdx int, gonIdx int, ponIdx int) (int, bool) {
+	curPlayer := room.Players[currentID]
+	onlyThrow := false
+
+	if huIdx != -1 {
+		currentID = (huIdx + 1) % 4
+		if gonIdx != -1 {
+			room.Players[gonIdx].OnFail(GON)
+		}
+		if ponIdx != -1 {
+			room.Players[ponIdx].OnFail(PON)
+		}
+	} else if gonIdx != -1 {
+		room.Players[gonIdx].OnSuccess(currentID, GON, throwCard, 2)
+		room.Players[gonIdx].Gon(throwCard, true)
+		room.Players[gonIdx].Credit += 2
+		room.Players[gonIdx].GonRecord[currentID] += 2
+		curPlayer.Credit -= 2
+		currentID = gonIdx
+	} else if ponIdx != -1 {
+		room.Players[ponIdx].OnSuccess(currentID, PON, throwCard, 0)
+		room.Players[ponIdx].Pon(throwCard)
+		currentID = ponIdx
+		onlyThrow = true
+	}
+	return currentID, onlyThrow
+}
+
+func (room *Room) end() {
+	if room.huUnder2() {
+		room.lackPenalty()
+		room.noTingPenalty()
+		room.returnMoney()
+	}
+
+	var data []GameResult
+	for _, player := range room.Players {
+		data = append(data, GameResult {player.Hand.ToStringArray(), player.Credit})
+	}
+	b, _ := json.Marshal(data)
+	room.BroadcastEnd(string(b))
+	// players := room.game.PlayerManager.FindPlayersInRoom(room.name)
+	// for _, player := range players {
+	// 	player.State = WAITING
+	// }
 }
 
 func (room *Room) huUnder2() bool {
@@ -209,17 +308,4 @@ func (room *Room) returnMoney() {
 			}
 		}
 	}
-}
-
-func (room *Room) end() {
-	var data []GameResult
-	for _, player := range room.Players {
-		data = append(data, GameResult {player.Hand.ToStringArray(), player.Credit})
-	}
-	b, _ := json.Marshal(data)
-	room.BroadcastEnd(string(b))
-	// players := room.game.PlayerManager.FindPlayersInRoom(room.name)
-	// for _, player := range players {
-	// 	player.State = WAITING
-	// }
 }
