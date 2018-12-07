@@ -13,13 +13,14 @@ import (
 // NewGameManager creates a new gameManager
 func NewGameManager() GameManager {
 	rooms := make(map[string]*Room)
-	game  := GameManager {rooms}
+	game  := GameManager {rooms, nil}
 	return game
 }
 
 // GameManager represents a gameManager
 type GameManager struct {
-	Rooms map[string]*Room
+	Rooms  map[string]*Room
+	Server *socketio.Server
 }
 
 // Login handles player's login
@@ -74,7 +75,8 @@ func (gManager *GameManager) CreateRoom() {
 			break
 		}
 	}
-	gManager.Rooms[roomName] = NewRoom(roomName)
+	gManager.Rooms[roomName]    = NewRoom(roomName)
+	gManager.Rooms[roomName].IO = gManager.Server
 	matchPlayer := gManager.Match()
 	gManager.Rooms[roomName].AddPlayer(matchPlayer)
 	gManager.Rooms[roomName].WaitToStart()

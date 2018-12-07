@@ -4,6 +4,6 @@ A mahjong server based on Golang
 
 ## TODO
 
-- Disconnect handle
+- ~~Disconnect handle~~
 - ~~Check Hu logic~~
 - ~~Check PonGon and OnGon broadcast function~~

@@ -11,7 +11,7 @@ import (
 
 // NewRoom creates a new room
 func NewRoom(name string) *Room {
-	return &Room {Name: name, Waiting: false}
+	return &Room {Name: name, Waiting: false, State: BeforeStart}
 }
 
 // Room represents a round of mahjong
@@ -25,6 +25,7 @@ type Room struct {
 	Waiting      bool
 	IO           *socketio.Server
 	Name         string
+	State        int
 }
 
 // NumPlayer returns the number of player in the room
@@ -122,6 +123,7 @@ func (room *Room) Run() {
 		curPlayer := room.Players[currentID]
 		throwCard := MJCard.Card {Color: -1, Value: 0}
 		action    := Action {NONE, throwCard, 0}
+		room.State = IDTurn + currentID
 
 		if onlyThrow {
 			throwCard = curPlayer.ThrowCard()
@@ -147,6 +149,7 @@ func (room *Room) Run() {
 			if fail || (action.Command & ONGON) == 0 && (action.Command & PONGON) == 0 {
 				if throwCard.Color > 0 {
 					room.DiscardTiles.Add(throwCard)
+					curPlayer.DiscardTiles.Add(throwCard)
 				}
 				currentID = (currentID + 1) % 4
 			}

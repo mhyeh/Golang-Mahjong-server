@@ -10,6 +10,15 @@ import (
 	"MJCard"
 )
 
+// Game State
+const (
+	BeforeStart = iota
+	DealCard
+	ChangeCard
+	ChooseLack
+	IDTurn
+)
+
 // GameResult represents the result of mahjong
 type GameResult struct {
 	Hand  []string
@@ -38,6 +47,7 @@ func (room *Room) init() {
 		}
 		player.Socket().Emit("dealCard", player.Hand.ToStringArray())
 	}
+	room.State = DealCard
 }
 
 func (room *Room) changeCard() {
@@ -63,6 +73,7 @@ func (room *Room) changeCard() {
 		t := MJCard.CardArrayToCards(tmp[i])
 		room.Players[i].Socket().Emit("afterChange", t.ToStringArray(), rand)
 	}
+	room.State = ChangeCard
 }
 
 func (room *Room) chooseLack() {
@@ -76,6 +87,7 @@ func (room *Room) chooseLack() {
 	}
 	waitGroup.Wait()
 	room.BroadcastLack()
+	room.State = ChooseLack
 }
 
 func (room *Room) checkAction(currentID int, action Action, throwCard MJCard.Card) (bool, int, int, int) {
@@ -125,7 +137,7 @@ func (room *Room) robGon(currentID int, actionSet [3]Action, huCard MJCard.Card,
 			score := int(math.Pow(2, float64(tai)))
 			curPlayer.Credit        -= score
 			room.Players[id].Credit += score
-			room.Players[id].HuCards.Add(huCard)
+			room.Players[id].HuTiles.Add(huCard)
 			room.Players[id].OnSuccess(currentID, HU, huCard, score)
 			if !fail {
 				curPlayer.Door.Sub(huCard)
@@ -180,7 +192,7 @@ func (room *Room) checkOthers(currentID int, throwCard MJCard.Card, huIdx *int, 
 
 		if (action.Command & HU) != 0 {
 			otherPlayer.IsHu = true
-			otherPlayer.HuCards.Add(action.Card)
+			otherPlayer.HuTiles.Add(action.Card)
 			if *huIdx == -1 {
 				room.HuTiles.Add(action.Card)
 			}
