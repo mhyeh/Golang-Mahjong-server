@@ -10,14 +10,15 @@ import (
 	"github.com/rs/cors"
 
 	"util"
-	"PManager"
+	"manager"
+	"ssj"
 )
 
 func main() {
 	rand.Seed(time.Now().Unix())
 
 	game := util.NewGameManager()
-	util.InitHuTable()
+	ssj.InitHuTable()
 
 	server, err := socketio.NewServer(nil)
 	if err != nil {
@@ -47,13 +48,13 @@ func main() {
 				return -1
 			}
 
-			index := PManager.FindPlayerByUUID(uuid)
+			index := manager.FindPlayerByUUID(uuid)
 			if index == -1 {
 				return -1
 			}
 
-			player := PManager.Players[index]
-			if (player.State & (PManager.MATCHED | PManager.READY | PManager.PLAYING)) != 0 && !(room == "") && player.Room == room {
+			player := manager.PlayerList[index]
+			if (player.State & (manager.MATCHED | manager.READY | manager.PLAYING)) != 0 && !(room == "") && player.Room == room {
 				so.Join(room)
 			}
 			player.Socket = &so
@@ -61,7 +62,7 @@ func main() {
 		})
 
 		so.On("ready", func(room string, uuid string) int {
-			if !PManager.Auth(room, uuid) {
+			if !manager.Auth(room, uuid) {
 				return -1
 			}
 
@@ -77,24 +78,24 @@ func main() {
 			if uuid == "" {
 				return "", []string{}, true
 			}
-			index := PManager.FindPlayerByUUID(uuid)
+			index := manager.FindPlayerByUUID(uuid)
 			if index == -1 {
 				return "", []string{}, true
 			}
-			player := PManager.Players[index]
+			player := manager.PlayerList[index]
 			room   := player.Room
-			return room, PManager.GetNameList(PManager.FindPlayersInRoom(room)), false
+			return room, manager.GetNameList(manager.FindPlayerListInRoom(room)), false
 		})
 
 		so.On("getID", func(uuid string, room string) int {
-			if !PManager.Auth(room, uuid) {
+			if !manager.Auth(room, uuid) {
 				return -1
 			}
-			index := PManager.FindPlayerByUUID(uuid)
-			if PManager.Players[index].State != PManager.READY {
+			index := manager.FindPlayerByUUID(uuid)
+			if manager.PlayerList[index].State != manager.READY {
 				return -1
 			}
-			return PManager.Players[index].Index
+			return manager.PlayerList[index].Index
 		})
 
 		so.On("getReadyPlayer", func(room string) []string {
@@ -105,11 +106,11 @@ func main() {
 		})
 
 		so.On("getHand", func(uuid string, room string) []string {
-			if !PManager.Auth(room, uuid) || game.Rooms[room].State < util.DealCard {
+			if !manager.Auth(room, uuid) || game.Rooms[room].State < util.DealCard {
 				return []string{}
 			}
-			index := PManager.FindPlayerByUUID(uuid)
-			id    := PManager.Players[index].Index
+			index := manager.FindPlayerByUUID(uuid)
+			id    := manager.PlayerList[index].Index
 			return game.Rooms[room].Players[id].Hand.ToStringArray()
 		})
 
@@ -142,11 +143,11 @@ func main() {
 		})
 
 		so.On("getDoor", func(uuid string, room string) ([][]string, []int, bool) {
-			if !PManager.Auth(room, uuid) {
+			if !manager.Auth(room, uuid) {
 				return [][]string{}, []int{}, true
 			}
-			index := PManager.FindPlayerByUUID(uuid)
-			id    := PManager.Players[index].Index
+			index := manager.FindPlayerByUUID(uuid)
+			id    := manager.PlayerList[index].Index
 			return game.Rooms[room].GetDoor(id)
 		})
 

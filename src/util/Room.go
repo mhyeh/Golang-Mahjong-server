@@ -5,8 +5,9 @@ import (
 
 	"github.com/googollee/go-socket.io"
 
-	"MJCard"
-	"PManager"
+	"tile"
+	"manager"
+	"action"
 )
 
 // NewRoom creates a new room
@@ -17,11 +18,10 @@ func NewRoom(name string) *Room {
 // Room represents a round of mahjong
 type Room struct {
 	Players      []*Player
-	ChangedTiles [4][]MJCard.Card
+	ChangedTiles [4][]tile.Tile
 	ChoosedLack  [4]int
-	Deck         MJCard.Cards
-	DiscardTiles MJCard.Cards
-	HuTiles      MJCard.Cards
+	Deck         tile.Set
+	HuTiles      tile.Set
 	Waiting      bool
 	IO           *socketio.Server
 	Name         string
@@ -30,10 +30,10 @@ type Room struct {
 
 // NumPlayer returns the number of player in the room
 func (room Room) NumPlayer() int {
-	list := PManager.FindPlayersInRoom(room.Name)
+	list := manager.FindPlayerListInRoom(room.Name)
 	num := 0
 	for _, player := range list {
-		if (player.State & (PManager.READY | PManager.PLAYING)) != 0 {
+		if (player.State & (manager.READY | manager.PLAYING)) != 0 {
 			num++
 		}
 	}
@@ -43,12 +43,12 @@ func (room Room) NumPlayer() int {
 // AddPlayer adds 4 player into this room
 func (room *Room) AddPlayer(playerList []string) {
 	for _, uuid := range playerList {
-		index := PManager.FindPlayerByUUID(uuid)
-		PManager.Players[index].Room = room.Name
+		index := manager.FindPlayerByUUID(uuid)
+		manager.PlayerList[index].Room = room.Name
 	}
-	list := PManager.FindPlayersInRoom(room.Name)
-	nameList := PManager.GetNameList(list)
-	for _, player := range list {
+	playerLsit := manager.FindPlayerListInRoom(room.Name)
+	nameList   := manager.GetNameList(playerLsit)
+	for _, player := range playerLsit {
 		(*player.Socket).Emit("readyToStart", room.Name, nameList)
 	}
 }
@@ -89,60 +89,59 @@ func (room *Room) Accept(uuid string, callback func(int)) {
 		callback(-1)
 		return
 	}
-	index := PManager.FindPlayerByUUID(uuid)
+	index := manager.FindPlayerByUUID(uuid)
 	if index == -1 {
 		callback(-1)
 		return
 	}
-	player := PManager.Players[index]
-	id     := room.NumPlayer()
+	player := manager.PlayerList[index]
+	idx    := room.NumPlayer()
 	room.BroadcastReady(player.Name)
-	callback(id)
-	player.Index = id
-	room.Players = append(room.Players, NewPlayer(room, id, player.UUID))
-	PManager.Players[index].State = PManager.READY
+	callback(idx)
+	player.Index = idx
+	room.Players = append(room.Players, NewPlayer(room, idx, player.UUID))
+	manager.PlayerList[index].State = manager.READY
 }
 
 // Run runs mahjong logic
 func (room *Room) Run() {
 	room.preproc()
-	currentID := 0
+	currentIdx := 0
 	onlyThrow := false
 	gameOver  := false
 	for !gameOver {
 		room.BroadcastRemainCard(room.Deck.Count());
-		curPlayer := room.Players[currentID]
-		throwCard := MJCard.Card {Color: -1, Value: 0}
-		action    := Action {NONE, throwCard, 0}
-		room.State = IDTurn + currentID
+		curPlayer := room.Players[currentIdx]
+		throwCard := tile.NewTile(-1, 0) 
+		act       := action.NewAction(action.NONE, throwCard, 0)
+		room.State = IdxTurn + currentIdx
 
 		if onlyThrow {
-			throwCard = curPlayer.ThrowCard()
+			throwCard = curPlayer.Throw()
 			curPlayer.Hand.Sub(throwCard)
 			onlyThrow = false
 		} else {
 			drawCard := room.Deck.Draw()
-			room.BroadcastDraw(currentID)
-			action = curPlayer.Draw(drawCard)
-			throwCard = action.Card
+			room.BroadcastDraw(currentIdx)
+			act       = curPlayer.Draw(drawCard)
+			throwCard = act.Tile
 		}
 
-		fail, huIdx, gonIdx, ponIdx := room.checkAction(currentID, action, throwCard)
+		fail, huIdx, gonIdx, ponIdx := room.checkAction(currentIdx, act, throwCard)
 		if fail {
-			curPlayer.OnFail(action.Command)
-		} else if action.Command != NONE {
-			curPlayer.OnSuccess(currentID, action.Command, action.Card, action.Score)
+			curPlayer.Fail(act.Command)
+		} else if act.Command != action.NONE {
+			curPlayer.Success(currentIdx, act.Command, act.Tile, act.Score)
 		}
 		curPlayer.JustGon = false
 
-		currentID, onlyThrow = room.doAction(currentID, throwCard, huIdx, gonIdx, ponIdx)
-		if currentID == curPlayer.ID {
-			if fail || (action.Command & ONGON) == 0 && (action.Command & PONGON) == 0 {
+		currentIdx, onlyThrow = room.doAction(currentIdx, throwCard, huIdx, gonIdx, ponIdx)
+		if currentIdx == curPlayer.ID {
+			if fail || (act.Command & action.ONGON) == 0 && (act.Command & action.PONGON) == 0 {
 				if throwCard.Color > 0 {
-					room.DiscardTiles.Add(throwCard)
 					curPlayer.DiscardTiles.Add(throwCard)
 				}
-				currentID = (currentID + 1) % 4
+				currentIdx = (currentIdx + 1) % 4
 			}
 		}
 		if room.Deck.IsEmpty() {

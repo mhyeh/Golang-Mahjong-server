@@ -1,7 +1,7 @@
-package util
+package ssj
 
-// SSJ cals tai
-func SSJ(hand uint64, door uint64) int {
+// CalTai cals tai
+func CalTai(hand uint64, door uint64) int {
 	idx := (((gData[hand & 134217727] | 4) &
 		(gData[hand >> 27] | 4) &
 		(gData[door & 134217727] | 64) &

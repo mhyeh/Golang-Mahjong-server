@@ -1,4 +1,4 @@
-package PManager
+package manager
 
 import (
 	"github.com/googollee/go-socket.io"
@@ -27,8 +27,8 @@ type IPlayer struct {
 // PlayerManager represents the array of pointer of IPlayer
 type PlayerManager []*IPlayer
 
-// Players is a PlayerManager
-var Players PlayerManager
+// PlayerList is a PlayerManager
+var PlayerList PlayerManager
 
 // GetNameList returns the list of player's name
 func GetNameList(list []*IPlayer) []string {
@@ -60,20 +60,20 @@ func AddPlayer(name string) (string, bool) {
 			break
 		}
 	}
-	Players = append(Players, &IPlayer {name, _uuid, "", nil, WAITING, -1})
+	PlayerList = append(PlayerList, &IPlayer {name, _uuid, "", nil, WAITING, -1})
 	return _uuid, false
 }
 
-// RemovePlayer remove a player from Players
+// RemovePlayer remove a player from PlayerList
 func RemovePlayer(id int) {
-	if id >= 0 && id < len(Players) {
-		Players = append((Players)[: id], (Players)[id + 1: ]...)
+	if id >= 0 && id < len(PlayerList) {
+		PlayerList = append((PlayerList)[: id], (PlayerList)[id + 1: ]...)
 	}
 }
 
 // FindPlayerByName gets player's index by player's name
 func FindPlayerByName(name string) int {
-	for index, player := range Players {
+	for index, player := range PlayerList {
 		if player.Name == name {
 			return index
 		}
@@ -83,7 +83,7 @@ func FindPlayerByName(name string) int {
 
 // FindPlayerByUUID gets player's index by player's uuid
 func FindPlayerByUUID(uuid string) int {
-	for index, player := range Players {
+	for index, player := range PlayerList {
 		if player.UUID == uuid {
 			return index
 		}
@@ -93,7 +93,7 @@ func FindPlayerByUUID(uuid string) int {
 
 // FindPlayerBySocket gets player's index by player's socket
 func FindPlayerBySocket(socket socketio.Socket) int {
-	for index, player := range Players {
+	for index, player := range PlayerList {
 		if (*player.Socket).Id() == socket.Id() {
 			return index
 		}
@@ -101,10 +101,10 @@ func FindPlayerBySocket(socket socketio.Socket) int {
 	return -1
 }
 
-// FindPlayersInRoom gets list of player which in the same room
-func FindPlayersInRoom(room string) []*IPlayer {
+// FindPlayerListInRoom gets list of player which in the same room
+func FindPlayerListInRoom(room string) []*IPlayer {
 	var list []*IPlayer
-	for _, player := range Players {
+	for _, player := range PlayerList {
 		if player.Room == room {
 			list = append(list, player)
 			if len(list) == 4 {
@@ -115,10 +115,10 @@ func FindPlayersInRoom(room string) []*IPlayer {
 	return list
 }
 
-// FindPlayersIsSameState gets list of player which are same state
-func FindPlayersIsSameState(state int) []*IPlayer {
+// FindPlayerListIsSameState gets list of player which are same state
+func FindPlayerListIsSameState(state int) []*IPlayer {
 	var list []*IPlayer
-	for _, player := range Players {
+	for _, player := range PlayerList {
 		if player.State == state {
 			list = append(list, player)
 			if len(list) == 4 {
@@ -131,7 +131,7 @@ func FindPlayersIsSameState(state int) []*IPlayer {
 
 // Auth authenticates a player
 func Auth(room string, uuid string) bool {
-	for _, player := range Players {
+	for _, player := range PlayerList {
 		if player.Room == room && player.UUID == uuid {
 			return true
 		}

@@ -10,6 +10,7 @@ A mahjong server based on Golang
 | MJCard / Color.go | Struct of Mahjong color |
 | MJCard / Cards.go | A set of Mahjong color |
 | PManager / PlayerManager.go | Manage player list |
+| SSJ / SSJ.go | Check Hu |
 | util / Action.go | Action made by player |
 | util / Broadcasr.go | Broadcast message to player in same room |
 | util / GameLogic.go | Main Mahjong logic |
@@ -17,7 +18,6 @@ A mahjong server based on Golang
 | util / Player.go | Struct of player |
 | util / Room.go | Struct of room |
 | util / RoomInfo.go | Recover game state |
-| util / SSJ.go | Check Hu |
 | server.go | main program |
 
 ## TODO
@@ -28,3 +28,4 @@ A mahjong server based on Golang
 - Check data send from socket
 - Error Handling
 - Optimize
+- Refactor
