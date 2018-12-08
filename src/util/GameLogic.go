@@ -62,9 +62,9 @@ func (room *Room) changeCard() {
 	}
 	waitGroup.Wait()
 
-	rand := rand.Int31n(3)
-	var tmp [4][]tile.Tile
+	rand   := rand.Int31n(3)
 	offset := [3]int {1, 2, 3}
+	var tmp [4][]tile.Tile
 	for i := 0; i < 4; i++ {
 		tmp[(i + offset[rand]) % 4] = room.ChangedTiles[i]
 	}
@@ -91,13 +91,13 @@ func (room *Room) chooseLack() {
 	room.State = ChooseLack
 }
 
-func (room *Room) checkAction(currentIdx int, act action.Action, throwCard tile.Tile) (bool, int, int, int) {
+func (room *Room) checkAction(currentIdx int, playerAct action.Action, throwCard tile.Tile) (bool, int, int, int) {
 	ponIdx, gonIdx, huIdx := -1, -1, -1
 	fail                  := false
 
-	if (act.Command & action.PONGON) != 0 {
-		fail = room.checkRobGon(currentIdx, act.Tile, &huIdx)
-	} else if (act.Command & action.ZIMO) == 0 && (act.Command & action.ONGON) == 0 {
+	if (playerAct.Command & action.PONGON) != 0 {
+		fail = room.checkRobGon(currentIdx, playerAct.Tile, &huIdx)
+	} else if (playerAct.Command & action.ZIMO) == 0 && (playerAct.Command & action.ONGON) == 0 {
 		room.checkOthers(currentIdx, throwCard, &huIdx, &gonIdx, &ponIdx)
 	}
 
@@ -112,10 +112,10 @@ func (room *Room) checkRobGon(currentIdx int, gonCard tile.Tile, huIdx *int) boo
 		id := (i + currentIdx) % 4;
 		tai := 0
 		if room.Players[id].CheckHu(gonCard, &tai) {
-			cards    := make(map[int][]tile.Tile)
-			cards[action.HU] = append(cards[action.HU], gonCard)
+			actionSet           := action.NewSet()
+			actionSet[action.HU] = append(actionSet[action.HU], gonCard)
 			go func (i int) {
-				playersAct[i - 1] = room.Players[i].Command(cards, action.HU)
+				playersAct[i - 1] = room.Players[i].Command(actionSet, action.HU)
 				waitGroup.Done()
 			}(i)
 		} else {
@@ -126,24 +126,24 @@ func (room *Room) checkRobGon(currentIdx int, gonCard tile.Tile, huIdx *int) boo
 	return room.robGon(currentIdx, playersAct, gonCard, huIdx)
 }
 
-func (room *Room) robGon(currentIdx int, playersAct [3]action.Action, huCard tile.Tile, huIdx *int) bool {
+func (room *Room) robGon(currentIdx int, playersAct [3]action.Action, huTile tile.Tile, huIdx *int) bool {
 	fail      := false
 	curPlayer := room.Players[currentIdx]
 	for i := 1; i < 4; i++ {
-		id  := (i + currentIdx) % 4
-		act := playersAct[i - 1]
-		if (act.Command & action.HU) != 0 {
+		id        := (i + currentIdx) % 4
+		playerAct := playersAct[i - 1]
+		if (playerAct.Command & action.HU) != 0 {
 			tai := 0
-			room.Players[id].CheckHu(huCard, &tai)
+			room.Players[id].CheckHu(huTile, &tai)
 			score := int(math.Pow(2, float64(tai)))
 			curPlayer.Credit        -= score
 			room.Players[id].Credit += score
-			room.Players[id].HuTiles.Add(huCard)
-			room.Players[id].Success(currentIdx, action.HU, huCard, score)
+			room.Players[id].HuTiles.Add(huTile)
+			room.Players[id].Success(currentIdx, action.HU, huTile, score)
 			if !fail {
-				curPlayer.Door.Sub(huCard)
-				curPlayer.VisiableDoor.Sub(huCard)
-				room.HuTiles.Add(huCard)
+				curPlayer.Door.Sub(huTile)
+				curPlayer.VisiableDoor.Sub(huTile)
+				room.HuTiles.Add(huTile)
 			}
 			*huIdx = id
 			fail = true
@@ -152,33 +152,33 @@ func (room *Room) robGon(currentIdx int, playersAct [3]action.Action, huCard til
 	return fail
 }
 
-func (room *Room) checkOthers(currentIdx int, throwCard tile.Tile, huIdx *int, gonIdx *int, ponIdx *int) {
-	act := action.NewAction(action.NONE, throwCard, 0)
-	var playerAct [3]action.Action
+func (room *Room) checkOthers(currentIdx int, throwTile tile.Tile, huIdx *int, gonIdx *int, ponIdx *int) {
+	playerAct := action.NewAction(action.NONE, throwTile, 0)
+	var playersAct [3]action.Action
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(3)
 	for i := 1; i < 4; i++ {
 		otherPlayer := room.Players[(i + currentIdx) % 4]
 		tai         := 0
 
-		otherPlayer.CheckHu(throwCard, &tai)
-		actions, command := otherPlayer.getAvaliableAction(false, throwCard, tai)
+		otherPlayer.CheckHu(throwTile, &tai)
+		actionSet, command := otherPlayer.getAvaliableAction(false, throwTile, tai)
 		if command == action.NONE {
-			act.Command      = action.NONE
-			playerAct[i - 1] = act
+			playerAct.Command = action.NONE
+			playersAct[i - 1] = playerAct
 			waitGroup.Done()
 		} else if otherPlayer.IsHu {
 			if (command & action.HU) != 0 {
-				act.Command = action.HU
+				playerAct.Command = action.HU
 			} else if (command & action.GON) != 0 {
-				act.Command = action.GON
+				playerAct.Command = action.GON
 			}
-			act.Tile         = throwCard
-			playerAct[i - 1] = act
+			playerAct.Tile    = throwTile
+			playersAct[i - 1] = playerAct
 			waitGroup.Done()
 		} else {
 			go func(i int) {
-				playerAct[i - 1] = otherPlayer.Command(actions, command)
+				playersAct[i - 1] = otherPlayer.Command(actionSet, command)
 				waitGroup.Done()
 			}(i)
 		}
@@ -188,14 +188,14 @@ func (room *Room) checkOthers(currentIdx int, throwCard tile.Tile, huIdx *int, g
 		playerID    := (i + currentIdx) % 4
 		otherPlayer := room.Players[playerID]
 		tai         := 0
-		act          = playerAct[i - 1]
-		otherPlayer.CheckHu(throwCard, &tai)
+		playerAct    = playersAct[i - 1]
+		otherPlayer.CheckHu(throwTile, &tai)
 
-		if (act.Command & action.HU) != 0 {
+		if (playerAct.Command & action.HU) != 0 {
 			otherPlayer.IsHu = true
-			otherPlayer.HuTiles.Add(act.Tile)
+			otherPlayer.HuTiles.Add(playerAct.Tile)
 			if *huIdx == -1 {
-				room.HuTiles.Add(act.Tile)
+				room.HuTiles.Add(playerAct.Tile)
 			}
 			*huIdx = playerID
 			Tai := tai
@@ -208,24 +208,24 @@ func (room *Room) checkOthers(currentIdx int, throwCard tile.Tile, huIdx *int, g
 				otherPlayer.MaxTai = tai
 			}
 			room.Players[currentIdx].Credit -= score
-			otherPlayer.Success(currentIdx, action.HU, act.Tile, score)
-		} else if (act.Command & action.GON) != 0 {
+			otherPlayer.Success(currentIdx, action.HU, playerAct.Tile, score)
+		} else if (playerAct.Command & action.GON) != 0 {
 			if *huIdx == -1 && *gonIdx == -1 {
 				*gonIdx = playerID
 			} else {
-				otherPlayer.Fail(act.Command)
+				otherPlayer.Fail(playerAct.Command)
 			}
-		} else if (act.Command & action.PON) != 0 {
+		} else if (playerAct.Command & action.PON) != 0 {
 			if *huIdx == -1 && *gonIdx == -1 && *ponIdx == -1 {
 				*ponIdx = playerID
 			} else {
-				otherPlayer.Fail(act.Command)
+				otherPlayer.Fail(playerAct.Command)
 			}
 		}
 	}
 }
 
-func (room *Room) doAction(currentIdx int, throwCard tile.Tile, huIdx int, gonIdx int, ponIdx int) (int, bool) {
+func (room *Room) doAction(currentIdx int, throwTile tile.Tile, huIdx int, gonIdx int, ponIdx int) (int, bool) {
 	curPlayer := room.Players[currentIdx]
 	onlyThrow := false
 
@@ -238,15 +238,15 @@ func (room *Room) doAction(currentIdx int, throwCard tile.Tile, huIdx int, gonId
 			room.Players[ponIdx].Fail(action.PON)
 		}
 	} else if gonIdx != -1 {
-		room.Players[gonIdx].Success(currentIdx, action.GON, throwCard, 2)
-		room.Players[gonIdx].Gon(throwCard, true)
+		room.Players[gonIdx].Success(currentIdx, action.GON, throwTile, 2)
+		room.Players[gonIdx].Gon(throwTile, true)
 		room.Players[gonIdx].Credit += 2
 		room.Players[gonIdx].GonRecord[currentIdx] += 2
 		curPlayer.Credit -= 2
 		currentIdx = gonIdx
 	} else if ponIdx != -1 {
-		room.Players[ponIdx].Success(currentIdx, action.PON, throwCard, 0)
-		room.Players[ponIdx].Pon(throwCard)
+		room.Players[ponIdx].Success(currentIdx, action.PON, throwTile, 0)
+		room.Players[ponIdx].Pon(throwTile)
 		currentIdx = ponIdx
 		onlyThrow = true
 	}

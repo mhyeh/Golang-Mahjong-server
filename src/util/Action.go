@@ -55,26 +55,26 @@ func (player *Player) Draw(drawCard tile.Tile) action.Action {
 	var tai int
 	player.CheckHu(tile.Tile {Color: -1, Value: 0}, &tai)
 	actionSet, command := player.getAvaliableAction(true, drawCard, tai)
-	act                := action.NewAction(action.NONE, drawCard, 0)
+	playerAct          := action.NewAction(action.NONE, drawCard, 0)
 
 	if command == action.NONE {
-		act.Command = action.NONE
-		act.Tile    = drawCard
+		playerAct.Command = action.NONE
+		playerAct.Tile    = drawCard
 	} else if player.IsHu {
 		if (command & action.ZIMO) != 0 {
-			act.Command = action.ZIMO
+			playerAct.Command = action.ZIMO
 		} else if (command & action.ONGON) != 0 {
-			act.Command = action.ONGON
+			playerAct.Command = action.ONGON
 		} else if (command & action.PONGON) != 0 {
-			act.Command = action.PONGON
+			playerAct.Command = action.PONGON
 		}
-		act.Tile = actionSet[act.Command][0]
+		playerAct.Tile = actionSet[playerAct.Command][0]
 	} else {
-		act = player.Command(actionSet, command)
+		playerAct = player.Command(actionSet, command)
 	}
 
-	player.procCommand(drawCard, &act, tai)
-	return act
+	player.procDrawCommand(drawCard, &playerAct, tai)
+	return playerAct
 }
 
 // Command emits to client to get command
@@ -207,7 +207,7 @@ func (player *Player) checkNonDrawAction(Tile tile.Tile, tai int) (action.Set, i
 	return actionSet, command
 }
 
-func (player *Player) procCommand(drawCard tile.Tile, act *action.Action, tai int) {
+func (player *Player) procDrawCommand(drawCard tile.Tile, act *action.Action, tai int) {
 	if (act.Command & action.ZIMO) != 0 {
 		player.ziMo(act, tai)
 	} else if (act.Command & action.ONGON) != 0 {
