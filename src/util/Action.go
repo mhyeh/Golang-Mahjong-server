@@ -25,7 +25,6 @@ type Action struct {
 	Score   int
 }
 
-
 // ChangeCard emits to client to get the change cards
 func (player *Player) ChangeCard() []MJCard.Card {
 	defaultChange := MJCard.CardArrayToCards(player.defaultChangeCard()).ToStringArray()
