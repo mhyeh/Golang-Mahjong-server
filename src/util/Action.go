@@ -13,12 +13,22 @@ import (
 func (player *Player) ChangeTile() []tile.Tile {
 	defaultChange := tile.ArrayToSet(player.defaultChangeCard()).ToStringArray()
 	waitingTime   := 30 * time.Second
+	t := make([]interface{}, 3)
+	for i := 0; i < 3; i++ {
+		t[i] = defaultChange[i]
+	}
+
 	player.Socket().Emit("change", defaultChange, waitingTime / 1000000)
-	val    := player.waitForSocket("changeCard", defaultChange, waitingTime)
-	valArr := val.([]interface{})
+	val := player.waitForSocket("changeCard", t, waitingTime)
 	var changeCards []tile.Tile
-	for i:= 0; i < 3; i++ {
-		changeCards = append(changeCards, tile.StringToTile(valArr[i].(string)))
+	switch val.(type) {
+	case []interface{}:
+		valArr := val.([]interface{})
+		for i:= 0; i < 3; i++ {
+			changeCards = append(changeCards, tile.StringToTile(valArr[i].(string)))
+		}
+	default:
+		changeCards = tile.StringArrayToTileArray(defaultChange)
 	}
 	player.Hand.Sub(changeCards)
 	player.room.BroadcastChange(player.ID)
@@ -30,21 +40,32 @@ func (player *Player) ChooseLack() int {
 	defaultLack := float64(0)
 	waitingTime := 10 * time.Second
 	go player.Socket().Emit("lack", defaultLack, waitingTime / 1000000)
-	val        := player.waitForSocket("chooseLack", defaultLack, waitingTime)
-	player.Lack = int(val.(float64))
+	val := player.waitForSocket("chooseLack", defaultLack, waitingTime)
+	switch val.(type) {
+	case float64:
+		player.Lack = int(val.(float64))
+	default:
+		player.Lack = 0
+	}
 	return player.Lack
 }
 
 // Throw emits to client to get the throw Tile
 func (player *Player) Throw() tile.Tile {
-	defaultCard := player.Hand.At(0).ToString()
+	defaultTile := player.Hand.At(0).ToString()
 	waitingTime := 10 * time.Second
-	go player.Socket().Emit("throw", defaultCard, waitingTime / 1000000)
-	val       := player.waitForSocket("throwCard", defaultCard, waitingTime)
-	throwCard := tile.StringToTile(val.(string))
-	player.Hand.Sub(throwCard)
-	player.room.BroadcastThrow(player.ID, throwCard)
-	return throwCard
+	go player.Socket().Emit("throw", defaultTile, waitingTime / 1000000)
+	val := player.waitForSocket("throwCard", defaultTile, waitingTime)
+	var throwTile tile.Tile
+	switch val.(type) {
+	case string:
+		throwTile = tile.StringToTile(val.(string))
+	default:
+		throwTile = tile.StringToTile(defaultTile)
+	}
+	player.Hand.Sub(throwTile)
+	player.room.BroadcastThrow(player.ID, throwTile)
+	return throwTile
 }
 
 // Draw draws a Tile
@@ -83,26 +104,34 @@ func (player *Player) Command(actionSet action.Set, command int) action.Action {
 		Key   int
 		Value []string
 	}
+	type TmpAct struct {
+		Command int
+		Tile    string
+		Score   int
+	}
+
 	var tmpSet []Tmp
 	for key, value := range actionSet {
 		t := tile.ArrayToSet(value)
 		tmp := Tmp {key, t.ToStringArray()}
 		tmpSet = append(tmpSet, tmp)
 	}
-
-	type TmpAct struct {
-		Command int
-		Tile    string
-		Score   int
-	}
+	
 	defaultCommand := TmpAct {action.NONE, "c0", 0}
 	waitingTime    := 10 * time.Second
 	actionJSON, _  := json.Marshal(actionSet)
 	commandJSON, _ := json.Marshal(defaultCommand)
 	go player.Socket().Emit("command", string(actionJSON), command, waitingTime / 1000000)
 	val := player.waitForSocket("sendCommand", string(commandJSON), waitingTime)
+	var commandStr string
+	switch val.(type) {
+	case string:
+		commandStr = val.(string)
+	default:
+		commandStr = string(commandJSON)
+	}
 	var t TmpAct
-	json.Unmarshal([]byte(val.(string)), &t)
+	json.Unmarshal([]byte(commandStr), &t)
 	return action.NewAction(t.Command, tile.StringToTile(t.Tile), 0)
 }
 

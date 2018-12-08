@@ -34,6 +34,7 @@ func (room *Room) preproc() {
 	room.changeCard()
 	time.Sleep(5 * time.Second)
 	room.chooseLack()
+	time.Sleep(5 * time.Second)
 }
 
 func (room *Room) init() {
