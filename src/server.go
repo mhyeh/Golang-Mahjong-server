@@ -98,14 +98,10 @@ func main() {
 		})
 
 		so.On("getReadyPlayer", func(room string) []string {
-			playerList := PManager.FindPlayersInRoom(room)
-			var nameList []string
-			for _, player := range playerList {
-				if player.State == PManager.READY {
-					nameList = append(nameList, player.Name)
-				}
+			if (game.Rooms[room] == nil) {
+				return []string{}
 			}
-			return nameList
+			return game.Rooms[room].GetReadyPlayers()
 		})
 
 		so.On("getHand", func(uuid string, room string) []string {
@@ -125,96 +121,61 @@ func main() {
 		})
 
 		so.On("getLack", func(room string) []int {
-			if game.Rooms[room] == nil || game.Rooms[room].State < util.ChooseLack {
+			if game.Rooms[room] == nil {
 				return []int{}
 			}
-			var res []int
-			for _, player := range game.Rooms[room].Players {
-				res = append(res, player.Lack)
-			}
-			return res
+			return game.Rooms[room].GetLack()
 		})
 
 		so.On("getHandCount", func(room string) []int {
-			if game.Rooms[room] == nil || game.Rooms[room].State < util.IDTurn {
+			if game.Rooms[room] == nil {
 				return []int{}
 			}
-			var res []int
-			for _, player := range game.Rooms[room].Players {
-				res = append(res, int(player.Hand.Count()))
-			}
-			return res
+			return game.Rooms[room].GetHandCount()
 		})
 
 		so.On("getRemainCount", func(room string) int {
-			if game.Rooms[room] == nil || game.Rooms[room].State < util.IDTurn {
+			if game.Rooms[room] == nil {
 				return 56
 			}
-			return int(game.Rooms[room].Deck.Count())
+			return game.Rooms[room].GetRemainCount()
 		})
 
 		so.On("getDoor", func(uuid string, room string) ([][]string, []int, bool) {
-			if !PManager.Auth(room, uuid) || game.Rooms[room].State < util.IDTurn {
+			if !PManager.Auth(room, uuid) {
 				return [][]string{}, []int{}, true
 			}
 			index := PManager.FindPlayerByUUID(uuid)
 			id    := PManager.Players[index].Index
-			var inVisible []int
-			var res       [][]string
-			for _, player := range game.Rooms[room].Players {
-				if id == player.ID {
-					res       = append(res, player.Door.ToStringArray())
-					inVisible = append(inVisible, 0)
-				} else {
-					res = append(res, player.VisiableDoor.ToStringArray())
-					inVisible = append(inVisible, int(player.Door.Count() - player.VisiableDoor.Count()))
-				}
-			}
-			return res, inVisible, false
+			return game.Rooms[room].GetDoor(id)
 		})
 
 		so.On("getSea", func(room string) ([][]string, bool) {
-			if game.Rooms[room] == nil || game.Rooms[room].State < util.IDTurn {
+			if game.Rooms[room] == nil {
 				return [][]string{}, true
 			}
-			var res [][]string
-			for _, player := range game.Rooms[room].Players {
-				res = append(res, player.DiscardTiles.ToStringArray())
-			}
-			return res, false
+			return game.Rooms[room].GetSea()
 		})
 
 		so.On("getHu", func(room string) ([][]string, bool) {
-			if game.Rooms[room] == nil || game.Rooms[room].State < util.IDTurn {
+			if game.Rooms[room] == nil {
 				return [][]string{}, true
 			}
-			var res [][]string
-			for _, player := range game.Rooms[room].Players {
-				res = append(res, player.HuTiles.ToStringArray())
-			}
-			return res, false
+			return game.Rooms[room].GetHu()
 		})
 
 		so.On("getCurrentIdx", func(room string) int {
 			if game.Rooms[room] == nil {
 				return -1
 			}
-			id := -1
-			if game.Rooms[room].State >= util.IDTurn {
-				id = game.Rooms[room].State - util.IDTurn
-			}
-			return id
+			return game.Rooms[room].GetCurrentIdx()
 		})
 
 		so.On("getScore", func(room string) []int {
 			if game.Rooms[room] == nil {
 				return []int{}
 			}
-			var res []int
-			for _, player := range game.Rooms[room].Players {
-				res = append(res, player.Credit)
-			}
-			return res
+			return game.Rooms[room].GetScore()
 		})
 
 		so.On("disconnection", func() {

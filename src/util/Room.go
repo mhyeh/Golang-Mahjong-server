@@ -103,15 +103,6 @@ func (room *Room) Accept(uuid string, callback func(int)) {
 	PManager.Players[index].State = PManager.READY
 }
 
-// GetPlayerList returns the list of player's name
-func (room Room) GetPlayerList() []string {
-	var nameList []string
-	for _, player := range room.Players {
-		nameList = append(nameList, player.Name())
-	}
-	return nameList
-}
-
 // Run runs mahjong logic
 func (room *Room) Run() {
 	room.preproc()
