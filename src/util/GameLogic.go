@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"MJCard"
+	"PManager"
 )
 
 // Game State
@@ -265,10 +266,10 @@ func (room *Room) end() {
 	}
 	b, _ := json.Marshal(data)
 	room.BroadcastEnd(string(b))
-	// players := room.game.PlayerManager.FindPlayersInRoom(room.name)
-	// for _, player := range players {
-	// 	player.State = WAITING
-	// }
+	players := PManager.FindPlayersInRoom(room.Name)
+	for _, player := range players {
+		player.State = PManager.WAITING
+	}
 }
 
 func (room *Room) huUnder2() bool {
