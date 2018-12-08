@@ -57,7 +57,7 @@ func (room *Room) changeCard() {
 	waitGroup.Add(4)
 	for i := 0; i < 4; i++ {
 		go func (id int) {
-			room.ChangedTiles[id] = room.Players[id].ChangeTile()
+			room.ChangedTiles[id] = room.Players[id].ChangeTiles()
 			waitGroup.Done()
 		}(i)
 	}

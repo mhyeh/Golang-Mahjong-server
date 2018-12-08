@@ -9,8 +9,8 @@ import (
 	"action"
 )
 
-// ChangeTile emits to client to get the change cards
-func (player *Player) ChangeTile() []tile.Tile {
+// ChangeTiles emits to client to get the change cards
+func (player *Player) ChangeTiles() []tile.Tile {
 	defaultChange := tile.ArrayToSet(player.defaultChangeCard()).ToStringArray()
 	waitingTime   := 30 * time.Second
 	t := make([]interface{}, 3)
@@ -20,19 +20,18 @@ func (player *Player) ChangeTile() []tile.Tile {
 
 	player.Socket().Emit("change", defaultChange, waitingTime / 1000000)
 	val := player.waitForSocket("changeCard", t, waitingTime)
-	var changeCards []tile.Tile
-	switch val.(type) {
-	case []interface{}:
+	var changeTiles []tile.Tile
+	if player.checkChangeTiles(val) {
 		valArr := val.([]interface{})
 		for i:= 0; i < 3; i++ {
-			changeCards = append(changeCards, tile.StringToTile(valArr[i].(string)))
+			changeTiles = append(changeTiles, tile.StringToTile(valArr[i].(string)))
 		}
-	default:
-		changeCards = tile.StringArrayToTileArray(defaultChange)
+	} else {
+		changeTiles = tile.StringArrayToTileArray(defaultChange)
 	}
-	player.Hand.Sub(changeCards)
+	player.Hand.Sub(changeTiles)
 	player.room.BroadcastChange(player.ID)
-	return changeCards
+	return changeTiles
 }
 
 // ChooseLack emits to client to get the choose lack
@@ -41,10 +40,9 @@ func (player *Player) ChooseLack() int {
 	waitingTime := 10 * time.Second
 	go player.Socket().Emit("lack", defaultLack, waitingTime / 1000000)
 	val := player.waitForSocket("chooseLack", defaultLack, waitingTime)
-	switch val.(type) {
-	case float64:
+	if player.checkLack(val) {
 		player.Lack = int(val.(float64))
-	default:
+	} else {
 		player.Lack = 0
 	}
 	return player.Lack
@@ -57,10 +55,9 @@ func (player *Player) Throw() tile.Tile {
 	go player.Socket().Emit("throw", defaultTile, waitingTime / 1000000)
 	val := player.waitForSocket("throwCard", defaultTile, waitingTime)
 	var throwTile tile.Tile
-	switch val.(type) {
-	case string:
+	if player.checkThrow(val) {
 		throwTile = tile.StringToTile(val.(string))
-	default:
+	} else {
 		throwTile = tile.StringToTile(defaultTile)
 	}
 	player.Hand.Sub(throwTile)
@@ -124,10 +121,9 @@ func (player *Player) Command(actionSet action.Set, command int) action.Action {
 	go player.Socket().Emit("command", string(actionJSON), command, waitingTime / 1000000)
 	val := player.waitForSocket("sendCommand", string(commandJSON), waitingTime)
 	var commandStr string
-	switch val.(type) {
-	case string:
+	if player.checkCommand(val) {
 		commandStr = val.(string)
-	default:
+	} else {
 		commandStr = string(commandJSON)
 	}
 	var t TmpAct
