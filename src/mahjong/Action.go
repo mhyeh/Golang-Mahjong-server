@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// Command type
+// COMMAND is a map of command type
 var COMMAND = map[string]int{
 	"NONE":   0,
 	"PON":    1,
@@ -36,6 +36,7 @@ type Action struct {
 	Score   int
 }
 
+// ToJSON converts action to json string
 func (act Action) ToJSON() string {
 	type Tmp struct {
 		Command int
@@ -47,7 +48,8 @@ func (act Action) ToJSON() string {
 	return string(JSON)
 }
 
-func StringToAction(actionStr string) Action {
+// JSONToAction converts json string to action
+func JSONToAction(actionStr string) Action {
 	type Tmp struct {
 		Command int
 		Tile    string
@@ -61,6 +63,7 @@ func StringToAction(actionStr string) Action {
 // ActionSet represents a set of action
 type ActionSet map[int][]Tile
 
+// ToJSON converts action set to json string
 func (set ActionSet) ToJSON() string {
 	type Tmp struct {
 		Key   int
@@ -174,7 +177,7 @@ func (player *Player) Command(actionSet ActionSet, command int) Action {
 	} else {
 		commandStr = defaultCommand
 	}
-	return StringToAction(commandStr)
+	return JSONToAction(commandStr)
 }
 
 // Fail emits to client to notice the command is failed

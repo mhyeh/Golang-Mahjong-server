@@ -46,6 +46,9 @@ func StringArrayToTileArray(tiles []string) []Tile {
 
 // StringToTile converts string to tile
 func StringToTile(tile string) Tile {
+	if tile == "" {
+		return NewTile(-1, 0)
+	}
 	r    := []rune(tile)
 	s    := string(r[0])
 	v, _ := strconv.Atoi(string(r[1]))

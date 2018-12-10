@@ -40,7 +40,7 @@ func (player *Player) checkCommand(val interface{}) bool {
 	default:
 		return false
 	}
-	act  := StringToAction(val.(string))
+	act  := JSONToAction(val.(string))
 	flag := false
 	for _, command := range COMMAND {
 		if act.Command == command {

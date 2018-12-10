@@ -22,7 +22,7 @@ func NewSuitSet(full bool) SuitSet {
 	return suitSet
 }
 
-// ArrayToSet converts tile array to suit set
+// ArrayToSuitSet converts tile array to suit set
 func ArrayToSuitSet(tile []Tile) SuitSet {
 	suitSet := NewSuitSet(false)
 	suitSet.Add(tile)

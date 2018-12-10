@@ -106,7 +106,6 @@ func (room *Room) Run() {
 	onlyThrow  := false
 	gameOver   := false
 	for !gameOver {
-		room.BroadcastRemainCard(room.Deck.Count())
 		curPlayer := room.Players[currentIdx]
 		throwCard := NewTile(-1, 0)
 		act       := NewAction(COMMAND["NONE"], throwCard, 0)
@@ -122,6 +121,7 @@ func (room *Room) Run() {
 			act       = curPlayer.Draw(drawCard)
 			throwCard = act.Tile
 		}
+		room.BroadcastRemainCard(room.Deck.Count())
 
 		fail, huIdx, gonIdx, ponIdx := room.checkAction(currentIdx, act, throwCard)
 		if fail {
