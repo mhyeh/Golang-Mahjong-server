@@ -25,6 +25,9 @@ var suitMap = map[string]int {
 
 // ToString converts tile to string
 func (tile Tile) ToString() string {
+	if tile.Suit < 0 || tile.Suit >= 3 {
+		return ""
+	}
 	return suitStr[tile.Suit] + strconv.Itoa(int(tile.Value + 1))
 }
 
@@ -46,6 +49,17 @@ func StringToTile(tile string) Tile {
 	r    := []rune(tile)
 	s    := string(r[0])
 	v, _ := strconv.Atoi(string(r[1]))
+	flag := false
+
+	for _, suit := range suitStr {
+		if s == suit {
+			flag = true
+			break
+		}
+	}
+	if !flag || v < 1 {
+		return NewTile(-1, 0)
+	}
 
 	return NewTile(suitMap[s], uint(v - 1))
 }

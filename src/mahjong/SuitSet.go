@@ -13,7 +13,7 @@ func NewSuitSet(full bool) SuitSet {
 	var suitSet SuitSet
 	for i := 0; i < 3; i++ {
 		if full {
-			t, _ := strconv.ParseUint("100100100100100100100100100", 2, 32)
+			t, _      := strconv.ParseUint("100100100100100100100100100", 2, 32)
 			suitSet[i] = Suit(t)
 		} else {
 			suitSet[i] = Suit(0)
@@ -47,11 +47,11 @@ func (suitSet SuitSet) Have(tile Tile) bool {
 // At returns idx th tile in suit set
 func (suitSet SuitSet) At(idx int) Tile {
 	amount := 0
-	for c := 0; c < 3; c++ {
+	for s := 0; s < 3; s++ {
 		for v := uint(0); v < 9; v++ {
-			amount += int(suitSet[c].GetIndex(v))
+			amount += int(suitSet[s].GetIndex(v))
 			if amount > idx {
-				return NewTile(c, v)
+				return NewTile(s, v)
 			}
 		}
 	}
@@ -79,9 +79,9 @@ func (suitSet *SuitSet) Draw() Tile {
 func (suitSet SuitSet) Translate(lack int) uint64 {
 	first  := true
 	result := uint64(0)
-	for i := 0; i < 3; i++ {
-		if i != lack {
-			result |= uint64(suitSet[i])
+	for s := 0; s < 3; s++ {
+		if s != lack {
+			result |= uint64(suitSet[s])
 			if (first) {
 				result <<= 27
 				first = false

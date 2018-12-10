@@ -124,16 +124,16 @@ func (room *Room) checkRobGon(currentIdx int, gonCard Tile, huIdx *int) bool {
 }
 
 func (room *Room) robGon(currentIdx int, playersAct [3]Action, huTile Tile, huIdx *int) bool {
-	fail := false
+	fail      := false
 	curPlayer := room.Players[currentIdx]
 	for i := 1; i < 4; i++ {
-		id := (i + currentIdx) % 4
+		id        := (i + currentIdx) % 4
 		playerAct := playersAct[i-1]
 		if (playerAct.Command & COMMAND["HU"]) != 0 {
 			tai := 0
 			room.Players[id].CheckHu(huTile, &tai)
 			score := int(math.Pow(2, float64(tai)))
-			curPlayer.Credit -= score
+			curPlayer.Credit        -= score
 			room.Players[id].Credit += score
 			room.Players[id].HuTiles.Add(huTile)
 			room.Players[id].Success(currentIdx, COMMAND["HU"], huTile, score)
@@ -152,11 +152,11 @@ func (room *Room) robGon(currentIdx int, playersAct [3]Action, huTile Tile, huId
 func (room *Room) checkOthers(currentIdx int, throwTile Tile, huIdx *int, gonIdx *int, ponIdx *int) {
 	playerAct := NewAction(COMMAND["NONE"], throwTile, 0)
 	var playersAct [3]Action
-	var waitGroup sync.WaitGroup
+	var waitGroup  sync.WaitGroup
 	waitGroup.Add(3)
 	for i := 1; i < 4; i++ {
 		otherPlayer := room.Players[(i+currentIdx)%4]
-		tai := 0
+		tai         := 0
 
 		otherPlayer.CheckHu(throwTile, &tai)
 		actionSet, command := otherPlayer.getAvaliableAction(false, throwTile, tai)
@@ -182,9 +182,9 @@ func (room *Room) checkOthers(currentIdx int, throwTile Tile, huIdx *int, gonIdx
 	}
 	waitGroup.Wait()
 	for i := 1; i < 4; i++ {
-		playerID := (i + currentIdx) % 4
+		playerID    := (i + currentIdx) % 4
 		otherPlayer := room.Players[playerID]
-		tai := 0
+		tai         := 0
 		playerAct = playersAct[i-1]
 		otherPlayer.CheckHu(throwTile, &tai)
 
@@ -195,7 +195,7 @@ func (room *Room) checkOthers(currentIdx int, throwTile Tile, huIdx *int, gonIdx
 				room.HuTiles.Add(playerAct.Tile)
 			}
 			*huIdx = playerID
-			Tai := tai
+			Tai   := tai
 			if room.Players[currentIdx].JustGon {
 				Tai++
 			}

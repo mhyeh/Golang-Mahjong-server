@@ -189,14 +189,16 @@ func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/socket.io/", server)
 
+	
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"http://140.118.127.157:9000"},
 		AllowCredentials: true,
 	})
 	
-
+	
 	handler := c.Handler(mux)
+	baseURL := "140.118.127.157:3000"
 
-	log.Println("Serving at 140.118.127.157:3000...")
-	log.Fatal(http.ListenAndServe("140.118.127.157:3000", handler))
+	log.Println("Serving at", baseURL, "...")
+	log.Fatal(http.ListenAndServe(baseURL, handler))
 }

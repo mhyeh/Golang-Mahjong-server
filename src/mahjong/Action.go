@@ -42,12 +42,12 @@ func (act Action) ToJSON() string {
 		Tile    string
 		Score   int
 	}
-	tmp := Tmp{act.Command, act.Tile.ToString(), act.Score}
+	tmp     := Tmp{act.Command, act.Tile.ToString(), act.Score}
 	JSON, _ := json.Marshal(tmp)
 	return string(JSON)
 }
 
-func StrToAction(actionStr string) Action {
+func StringToAction(actionStr string) Action {
 	type Tmp struct {
 		Command int
 		Tile    string
@@ -68,8 +68,8 @@ func (set ActionSet) ToJSON() string {
 	}
 	var tmpSet []Tmp
 	for key, value := range set {
-		t := ArrayToSuitSet(value)
-		tmp := Tmp{key, t.ToStringArray()}
+		t     := ArrayToSuitSet(value)
+		tmp   := Tmp{key, t.ToStringArray()}
 		tmpSet = append(tmpSet, tmp)
 	}
 	JSON, _ := json.Marshal(tmpSet)
@@ -79,7 +79,7 @@ func (set ActionSet) ToJSON() string {
 // ChangeTiles emits to client to get the change cards
 func (player *Player) ChangeTiles() []Tile {
 	defaultChange := ArrayToSuitSet(player.defaultChangeCard()).ToStringArray()
-	waitingTime := 30 * time.Second
+	waitingTime   := 30 * time.Second
 	t := make([]interface{}, 3)
 	for i := 0; i < 3; i++ {
 		t[i] = defaultChange[i]
@@ -164,8 +164,8 @@ func (player *Player) Draw(drawCard Tile) Action {
 
 // Command emits to client to get command
 func (player *Player) Command(actionSet ActionSet, command int) Action {
-	defaultCommand := NewAction(COMMAND["NONE"], NewTile(0, 0), 0).ToJSON()
-	waitingTime := 10 * time.Second
+	defaultCommand := NewAction(COMMAND["NONE"], NewTile(-1, 0), 0).ToJSON()
+	waitingTime    := 10 * time.Second
 	go player.Socket().Emit("command", actionSet.ToJSON(), command, waitingTime/1000000)
 	val := player.waitForSocket("sendCommand", defaultCommand, waitingTime)
 	var commandStr string
@@ -174,7 +174,7 @@ func (player *Player) Command(actionSet ActionSet, command int) Action {
 	} else {
 		commandStr = defaultCommand
 	}
-	return StrToAction(commandStr)
+	return StringToAction(commandStr)
 }
 
 // Fail emits to client to notice the command is failed
@@ -222,7 +222,7 @@ func (player *Player) waitForSocket(eventName string, defaultValue interface{}, 
 
 func (player *Player) getAvaliableAction(isDraw bool, Tile Tile, tai int) (ActionSet, int) {
 	actionSet := NewActionSet()
-	command := 0
+	command   := 0
 
 	if isDraw {
 		actionSet, command = player.checkDrawAction(Tile, tai)
@@ -234,7 +234,7 @@ func (player *Player) getAvaliableAction(isDraw bool, Tile Tile, tai int) (Actio
 
 func (player *Player) checkDrawAction(Tile Tile, tai int) (ActionSet, int) {
 	actionSet := NewActionSet()
-	command := 0
+	command   := 0
 	if tai > 0 {
 		command |= COMMAND["ZIMO"]
 		actionSet[COMMAND["ZIMO"]] = append(actionSet[COMMAND["ZIMO"]], Tile)
@@ -260,7 +260,7 @@ func (player *Player) checkDrawAction(Tile Tile, tai int) (ActionSet, int) {
 
 func (player *Player) checkNonDrawAction(Tile Tile, tai int) (ActionSet, int) {
 	actionSet := NewActionSet()
-	command := 0
+	command   := 0
 	if tai > 0 {
 		command |= COMMAND["HU"]
 		actionSet[COMMAND["HU"]] = append(actionSet[COMMAND["HU"]], Tile)
@@ -282,9 +282,9 @@ func (player *Player) procDrawCommand(drawCard Tile, act *Action, tai int) {
 	if (act.Command & COMMAND["ZIMO"]) != 0 {
 		player.ziMo(act, tai)
 	} else if (act.Command & COMMAND["ONGON"]) != 0 {
-		player.onGon(act)
+		player.selfGon(act, COMMAND["ONGON"])
 	} else if (act.Command & COMMAND["PONGON"]) != 0 {
-		player.onGon(act)
+		player.selfGon(act, COMMAND["PONGON"])
 	} else {
 		if player.IsHu {
 			act.Tile = drawCard
@@ -318,26 +318,19 @@ func (player *Player) ziMo(action *Action, tai int) {
 	}
 }
 
-func (player *Player) onGon(action *Action) {
-	player.Gon(action.Tile, false)
-	action.Score = 2
-	for i := 0; i < 4; i++ {
-		if i != player.ID {
-			player.Credit += 2
-			player.GonRecord[i] += 2
-			player.room.Players[i].Credit -= 2
-		}
+func (player *Player) selfGon(action *Action, Type int) {
+	if Type == COMMAND["ONGON"] {
+		player.Gon(action.Tile, false)
+		action.Score = 2
+	} else {
+		player.Gon(action.Tile, true)
+		action.Score = 1
 	}
-}
-
-func (player *Player) ponGon(action *Action) {
-	player.Gon(action.Tile, true)
-	action.Score = 1
 	for i := 0; i < 4; i++ {
 		if i != player.ID {
-			player.Credit++
-			player.GonRecord[i]++
-			player.room.Players[i].Credit--
+			player.Credit += action.Score
+			player.GonRecord[i] += action.Score
+			player.room.Players[i].Credit -= action.Score
 		}
 	}
 }

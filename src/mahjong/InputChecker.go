@@ -1,9 +1,5 @@
 package mahjong
 
-import (
-	"encoding/json"
-)
-
 func (player *Player) checkChangeTiles(val interface{}) bool {
 	switch val.(type) {
 	case []interface{}:
@@ -44,21 +40,12 @@ func (player *Player) checkCommand(val interface{}) bool {
 	default:
 		return false
 	}
-	type Tmp struct {
-		Command int
-		Tile    string
-		Score   int
-	}
-	var t Tmp
-	err := json.Unmarshal([]byte(val.(string)), &t)
-	if err != nil {
-		return false
-	}
+	act  := StringToAction(val.(string))
 	flag := false
 	for _, command := range COMMAND {
-		if t.Command == command {
+		if act.Command == command {
 			flag = true
 		}
 	}
-	return flag && IsValidTile(t.Tile)
+	return flag && act.Tile.Suit != -1
 }

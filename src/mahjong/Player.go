@@ -91,7 +91,7 @@ func (player *Player) CheckGon(tile Tile) bool {
 		player.Hand.Add(tile)
 		player.Door.Sub(tile)
 	}
-	return (oldTai == newTai)
+	return oldTai == newTai
 }
 
 // CheckPon checks if the player can pon
@@ -130,7 +130,7 @@ func (player *Player) CheckTing(max *int) bool {
 	for i := uint(0); i < 18; i++ {
 		if ((total >> (i * 3)) & 7) < 4 {
 			newHand := tHand + (1 << (i * 3))
-			tai := CalTai(newHand, tDoor)
+			tai     := CalTai(newHand, tDoor)
 			if tai > *max {
 				*max = tai
 			}

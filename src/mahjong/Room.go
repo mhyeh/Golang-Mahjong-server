@@ -27,7 +27,7 @@ type Room struct {
 // NumPlayer returns the number of player in the room
 func (room Room) NumPlayer() int {
 	list := FindPlayerListInRoom(room.Name)
-	num := 0
+	num  := 0
 	for _, player := range list {
 		if (player.State & (READY | PLAYING)) != 0 {
 			num++
@@ -43,7 +43,7 @@ func (room *Room) AddPlayer(playerList []string) {
 		PlayerList[index].Room = room.Name
 	}
 	playerLsit := FindPlayerListInRoom(room.Name)
-	nameList := GetNameList(playerLsit)
+	nameList   := GetNameList(playerLsit)
 	for _, player := range playerLsit {
 		(*player.Socket).Emit("readyToStart", room.Name, nameList)
 	}
@@ -103,13 +103,13 @@ func (room *Room) Accept(uuid string, callback func(int)) {
 func (room *Room) Run() {
 	room.preproc()
 	currentIdx := 0
-	onlyThrow := false
-	gameOver := false
+	onlyThrow  := false
+	gameOver   := false
 	for !gameOver {
 		room.BroadcastRemainCard(room.Deck.Count())
 		curPlayer := room.Players[currentIdx]
 		throwCard := NewTile(-1, 0)
-		act := NewAction(COMMAND["NONE"], throwCard, 0)
+		act       := NewAction(COMMAND["NONE"], throwCard, 0)
 		room.State = IdxTurn + currentIdx
 
 		if onlyThrow {
@@ -119,7 +119,7 @@ func (room *Room) Run() {
 		} else {
 			drawCard := room.Deck.Draw()
 			room.BroadcastDraw(currentIdx)
-			act = curPlayer.Draw(drawCard)
+			act       = curPlayer.Draw(drawCard)
 			throwCard = act.Tile
 		}
 
