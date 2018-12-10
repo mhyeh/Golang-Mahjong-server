@@ -6,8 +6,7 @@ import (
 
 // NewTile creates a new tile
 func NewTile(suit int, value uint) Tile {
-	tile := Tile {Suit: suit, Value: value}
-	return tile
+	return Tile {Suit: suit, Value: value}
 }
 
 // Tile represents a mahjong tile
@@ -35,11 +34,7 @@ func (tile Tile) ToString() string {
 func StringArrayToTileArray(tiles []string) []Tile {
 	var res []Tile
 	for _, tile := range tiles {
-		r    := []rune(tile)
-		s    := string(r[0])
-		v, _ := strconv.Atoi(string(r[1]))
-
-		res = append(res, NewTile(suitMap[s], uint(v - 1)))
+		res = append(res, StringToTile(tile))
 	}
 	return res
 }
@@ -69,6 +64,9 @@ func StringToTile(tile string) Tile {
 
 // IsValidTile checks if tile string is vaild
 func IsValidTile(tile string) bool {
+	if tile == "" {
+		return false
+	}
 	r    := []rune(tile)
 	s    := string(r[0])
 	v, _ := strconv.Atoi(string(r[1]))
@@ -79,8 +77,5 @@ func IsValidTile(tile string) bool {
 			break
 		}
 	}
-	if !flag {
-		return false
-	}
-	return v > 0 && v <= 9
+	return flag && v > 0 && v <= 9
 }

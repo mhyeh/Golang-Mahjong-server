@@ -11,12 +11,12 @@ type SuitSet [3]Suit
 // NewSuitSet creates a new suit suitSet
 func NewSuitSet(full bool) SuitSet {
 	var suitSet SuitSet
-	for i := 0; i < 3; i++ {
+	for s := 0; s < 3; s++ {
 		if full {
 			t, _      := strconv.ParseUint("100100100100100100100100100", 2, 32)
-			suitSet[i] = Suit(t)
+			suitSet[s] = Suit(t)
 		} else {
-			suitSet[i] = Suit(0)
+			suitSet[s] = Suit(0)
 		}
 	}
 	return suitSet
@@ -61,8 +61,8 @@ func (suitSet SuitSet) At(idx int) Tile {
 // Count returns amount of suit set
 func (suitSet SuitSet) Count() uint {
 	amount := uint(0)
-	for i := 0; i < 3; i++ {
-		amount += suitSet[i].Count()
+	for s := 0; s < 3; s++ {
+		amount += suitSet[s].Count()
 	}
 	return amount
 }

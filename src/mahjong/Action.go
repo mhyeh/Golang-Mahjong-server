@@ -19,14 +19,12 @@ var COMMAND = map[string]int{
 
 // NewAction creates a new action
 func NewAction(command int, tile Tile, score int) Action {
-	action := Action{command, tile, score}
-	return action
+	return Action{command, tile, score}
 }
 
 // NewActionSet creates a new action set
 func NewActionSet() ActionSet {
-	set := make(ActionSet)
-	return set
+	return make(ActionSet)
 }
 
 // Action represent a command made by player
@@ -72,7 +70,7 @@ func (set ActionSet) ToJSON() string {
 	var tmpSet []Tmp
 	for key, value := range set {
 		t     := ArrayToSuitSet(value)
-		tmp   := Tmp{key, t.ToStringArray()}
+		tmp   := Tmp {key, t.ToStringArray()}
 		tmpSet = append(tmpSet, tmp)
 	}
 	JSON, _ := json.Marshal(tmpSet)

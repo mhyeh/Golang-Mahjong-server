@@ -6,20 +6,20 @@ import (
 
 // NewPlayer creates a new player
 func NewPlayer(room *Room, id int, uuid string) *Player {
-	return &Player{room: room, ID: id, UUID: uuid}
+	return &Player {room: room, ID: id, UUID: uuid}
 }
 
 // Player represents a player in mahjong
 type Player struct {
-	Lack         int
-	Credit       int
-	MaxTai       int
-	GonRecord    [4]int
 	Hand         SuitSet
 	Door         SuitSet
 	VisiableDoor SuitSet
 	DiscardTiles SuitSet
 	HuTiles      SuitSet
+	GonRecord    [4]int
+	Lack         int
+	Credit       int
+	MaxTai       int
 	IsHu         bool
 	IsTing       bool
 	JustGon      bool

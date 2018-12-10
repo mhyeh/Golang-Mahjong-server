@@ -30,11 +30,11 @@ func (room *Room) preproc() {
 	room.changeCard()
 	time.Sleep(5 * time.Second)
 	room.chooseLack()
-	time.Sleep(5 * time.Second)
+	time.Sleep(3 * time.Second)
 }
 
 func (room *Room) init() {
-	room.Deck = NewSuitSet(true)
+	room.Deck    = NewSuitSet(true)
 	room.HuTiles = NewSuitSet(false)
 
 	for _, player := range room.Players {
@@ -59,11 +59,11 @@ func (room *Room) changeCard() {
 	}
 	waitGroup.Wait()
 
-	rand := rand.Int31n(3)
+	rand   := rand.Int31n(3)
 	offset := [3]int{1, 2, 3}
 	var tmp [4][]Tile
 	for i := 0; i < 4; i++ {
-		tmp[(i+offset[rand])%4] = room.ChangedTiles[i]
+		tmp[(i + offset[rand]) % 4] = room.ChangedTiles[i]
 	}
 
 	for i := 0; i < 4; i++ {
@@ -90,7 +90,7 @@ func (room *Room) chooseLack() {
 
 func (room *Room) checkAction(currentIdx int, playerAct Action, throwCard Tile) (bool, int, int, int) {
 	ponIdx, gonIdx, huIdx := -1, -1, -1
-	fail := false
+	fail                  := false
 
 	if (playerAct.Command & COMMAND["PONGON"]) != 0 {
 		fail = room.checkRobGon(currentIdx, playerAct.Tile, &huIdx)
@@ -102,11 +102,11 @@ func (room *Room) checkAction(currentIdx int, playerAct Action, throwCard Tile) 
 }
 
 func (room *Room) checkRobGon(currentIdx int, gonCard Tile, huIdx *int) bool {
-	var waitGroup sync.WaitGroup
+	var waitGroup  sync.WaitGroup
 	var playersAct [3]Action
 	waitGroup.Add(3)
 	for i := 1; i < 4; i++ {
-		id := (i + currentIdx) % 4
+		id  := (i + currentIdx) % 4
 		tai := 0
 		if room.Players[id].CheckHu(gonCard, &tai) {
 			actionSet := NewActionSet()
@@ -128,7 +128,7 @@ func (room *Room) robGon(currentIdx int, playersAct [3]Action, huTile Tile, huId
 	curPlayer := room.Players[currentIdx]
 	for i := 1; i < 4; i++ {
 		id        := (i + currentIdx) % 4
-		playerAct := playersAct[i-1]
+		playerAct := playersAct[i - 1]
 		if (playerAct.Command & COMMAND["HU"]) != 0 {
 			tai := 0
 			room.Players[id].CheckHu(huTile, &tai)
@@ -143,7 +143,7 @@ func (room *Room) robGon(currentIdx int, playersAct [3]Action, huTile Tile, huId
 				room.HuTiles.Add(huTile)
 			}
 			*huIdx = id
-			fail = true
+			fail   = true
 		}
 	}
 	return fail
@@ -155,14 +155,14 @@ func (room *Room) checkOthers(currentIdx int, throwTile Tile, huIdx *int, gonIdx
 	var waitGroup  sync.WaitGroup
 	waitGroup.Add(3)
 	for i := 1; i < 4; i++ {
-		otherPlayer := room.Players[(i+currentIdx)%4]
+		otherPlayer := room.Players[(i + currentIdx) % 4]
 		tai         := 0
 
 		otherPlayer.CheckHu(throwTile, &tai)
 		actionSet, command := otherPlayer.getAvaliableAction(false, throwTile, tai)
 		if command == COMMAND["NONE"] {
 			playerAct.Command = COMMAND["NONE"]
-			playersAct[i-1] = playerAct
+			playersAct[i - 1] = playerAct
 			waitGroup.Done()
 		} else if otherPlayer.IsHu {
 			if (command & COMMAND["HU"]) != 0 {
@@ -170,12 +170,12 @@ func (room *Room) checkOthers(currentIdx int, throwTile Tile, huIdx *int, gonIdx
 			} else if (command & COMMAND["GON"]) != 0 {
 				playerAct.Command = COMMAND["GON"]
 			}
-			playerAct.Tile = throwTile
-			playersAct[i-1] = playerAct
+			playerAct.Tile    = throwTile
+			playersAct[i - 1] = playerAct
 			waitGroup.Done()
 		} else {
 			go func(i int) {
-				playersAct[i-1] = otherPlayer.Command(actionSet, command)
+				playersAct[i - 1] = otherPlayer.Command(actionSet, command)
 				waitGroup.Done()
 			}(i)
 		}
@@ -185,7 +185,7 @@ func (room *Room) checkOthers(currentIdx int, throwTile Tile, huIdx *int, gonIdx
 		playerID    := (i + currentIdx) % 4
 		otherPlayer := room.Players[playerID]
 		tai         := 0
-		playerAct = playersAct[i-1]
+		playerAct    = playersAct[i - 1]
 		otherPlayer.CheckHu(throwTile, &tai)
 
 		if (playerAct.Command & COMMAND["HU"]) != 0 {
@@ -245,7 +245,7 @@ func (room *Room) doAction(currentIdx int, throwTile Tile, huIdx int, gonIdx int
 		room.Players[ponIdx].Success(currentIdx, COMMAND["PON"], throwTile, 0)
 		room.Players[ponIdx].Pon(throwTile)
 		currentIdx = ponIdx
-		onlyThrow = true
+		onlyThrow  = true
 	}
 	return currentIdx, onlyThrow
 }
@@ -299,8 +299,8 @@ func (room *Room) noTingPenalty() {
 		if !room.Players[i].IsTing && !room.Players[i].IsHu {
 			for j := 0; j < 4; j++ {
 				if room.Players[j].IsTing && i != j {
-					room.Players[i].Credit -= int(math.Pow(2, float64(room.Players[j].MaxTai-1)))
-					room.Players[j].Credit += int(math.Pow(2, float64(room.Players[j].MaxTai-1)))
+					room.Players[i].Credit -= int(math.Pow(2, float64(room.Players[j].MaxTai - 1)))
+					room.Players[j].Credit += int(math.Pow(2, float64(room.Players[j].MaxTai - 1)))
 				}
 			}
 		}
