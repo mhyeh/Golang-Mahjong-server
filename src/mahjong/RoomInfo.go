@@ -1,4 +1,4 @@
-package util
+package mahjong
 
 // GetPlayerList returns the list of player's name
 func (room Room) GetPlayerList() []string {

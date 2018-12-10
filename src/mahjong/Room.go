@@ -1,13 +1,9 @@
-package util
+package mahjong
 
 import (
 	"time"
 
 	"github.com/googollee/go-socket.io"
-
-	"tile"
-	"manager"
-	"action"
 )
 
 // NewRoom creates a new room
@@ -18,10 +14,10 @@ func NewRoom(name string) *Room {
 // Room represents a round of mahjong
 type Room struct {
 	Players      []*Player
-	ChangedTiles [4][]tile.Tile
+	ChangedTiles [4][]Tile
 	ChoosedLack  [4]int
-	Deck         tile.Set
-	HuTiles      tile.Set
+	Deck         SuitSet
+	HuTiles      SuitSet
 	Waiting      bool
 	IO           *socketio.Server
 	Name         string
@@ -30,10 +26,10 @@ type Room struct {
 
 // NumPlayer returns the number of player in the room
 func (room Room) NumPlayer() int {
-	list := manager.FindPlayerListInRoom(room.Name)
-	num := 0
+	list := FindPlayerListInRoom(room.Name)
+	num  := 0
 	for _, player := range list {
-		if (player.State & (manager.READY | manager.PLAYING)) != 0 {
+		if (player.State & (READY | PLAYING)) != 0 {
 			num++
 		}
 	}
@@ -43,11 +39,11 @@ func (room Room) NumPlayer() int {
 // AddPlayer adds 4 player into this room
 func (room *Room) AddPlayer(playerList []string) {
 	for _, uuid := range playerList {
-		index := manager.FindPlayerByUUID(uuid)
-		manager.PlayerList[index].Room = room.Name
+		index := FindPlayerByUUID(uuid)
+		PlayerList[index].Room = room.Name
 	}
-	playerLsit := manager.FindPlayerListInRoom(room.Name)
-	nameList   := manager.GetNameList(playerLsit)
+	playerLsit := FindPlayerListInRoom(room.Name)
+	nameList   := GetNameList(playerLsit)
 	for _, player := range playerLsit {
 		(*player.Socket).Emit("readyToStart", room.Name, nameList)
 	}
@@ -89,31 +85,31 @@ func (room *Room) Accept(uuid string, callback func(int)) {
 		callback(-1)
 		return
 	}
-	index := manager.FindPlayerByUUID(uuid)
+	index := FindPlayerByUUID(uuid)
 	if index == -1 {
 		callback(-1)
 		return
 	}
-	player := manager.PlayerList[index]
+	player := PlayerList[index]
 	idx    := room.NumPlayer()
 	room.BroadcastReady(player.Name)
 	callback(idx)
 	player.Index = idx
 	room.Players = append(room.Players, NewPlayer(room, idx, player.UUID))
-	manager.PlayerList[index].State = manager.READY
+	PlayerList[index].State = READY
 }
 
 // Run runs mahjong logic
 func (room *Room) Run() {
 	room.preproc()
 	currentIdx := 0
-	onlyThrow := false
-	gameOver  := false
+	onlyThrow  := false
+	gameOver   := false
 	for !gameOver {
 		room.BroadcastRemainCard(room.Deck.Count());
 		curPlayer := room.Players[currentIdx]
-		throwCard := tile.NewTile(-1, 0) 
-		act       := action.NewAction(action.NONE, throwCard, 0)
+		throwCard := NewTile(-1, 0) 
+		act       := NewAction(NONE, throwCard, 0)
 		room.State = IdxTurn + currentIdx
 
 		if onlyThrow {
@@ -130,15 +126,15 @@ func (room *Room) Run() {
 		fail, huIdx, gonIdx, ponIdx := room.checkAction(currentIdx, act, throwCard)
 		if fail {
 			curPlayer.Fail(act.Command)
-		} else if act.Command != action.NONE {
+		} else if act.Command != NONE {
 			curPlayer.Success(currentIdx, act.Command, act.Tile, act.Score)
 		}
 		curPlayer.JustGon = false
 
 		currentIdx, onlyThrow = room.doAction(currentIdx, throwCard, huIdx, gonIdx, ponIdx)
 		if currentIdx == curPlayer.ID {
-			if fail || (act.Command & action.ONGON) == 0 && (act.Command & action.PONGON) == 0 {
-				if throwCard.Color > 0 {
+			if fail || (act.Command & ONGON) == 0 && (act.Command & PONGON) == 0 {
+				if throwCard.Suit > 0 {
 					curPlayer.DiscardTiles.Add(throwCard)
 				}
 				currentIdx = (currentIdx + 1) % 4

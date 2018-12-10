@@ -1,4 +1,4 @@
-package util
+package mahjong
 
 import (
 	"math/rand"
@@ -6,8 +6,6 @@ import (
 
 	"github.com/googollee/go-socket.io";
 	"github.com/satori/go.uuid";
-
-	"manager"
 )
 
 // NewGameManager creates a new gameManager
@@ -25,26 +23,26 @@ type GameManager struct {
 
 // Login handles player's login
 func (gManager *GameManager) Login(name string, socket socketio.Socket) (string, bool) {
-	uuid, err := manager.AddPlayer(name)
+	uuid, err := AddPlayer(name)
 	if err {
 		return "", true
 	}
-	index := manager.FindPlayerByUUID(uuid)
-	manager.PlayerList[index].Socket = &socket
-	manager.PlayerList[index].State  = manager.WAITING
+	index := FindPlayerByUUID(uuid)
+	PlayerList[index].Socket = &socket
+	PlayerList[index].State  = WAITING
 
 	return uuid, false
 }
 
 // Logout handles player's logout
 func (gManager *GameManager) Logout(socket socketio.Socket) {
-	index := manager.FindPlayerBySocket(socket)
-	if index >= 0 && index < len(manager.PlayerList) {
-		if manager.PlayerList[index].State == manager.WAITING {
-			manager.RemovePlayer(index)
+	index := FindPlayerBySocket(socket)
+	if index >= 0 && index < len(PlayerList) {
+		if PlayerList[index].State == WAITING {
+			RemovePlayer(index)
 		} 
-		// else if manager.PlayerList[index].State == MATCHED {
-		// 	gManager.RemoveRoom(manager.PlayerList[index].Room)
+		// else if PlayerList[index].State == MATCHED {
+		// 	gManager.RemoveRoom(PlayerList[index].Room)
 		// 	RemovePlayer(index)
 		// }
 	}
@@ -63,7 +61,7 @@ func (gManager *GameManager) Exec() {
 
 // WaitingNum returns the number of player which state are waiting
 func (gManager *GameManager) WaitingNum() int {
-	return len(manager.FindPlayerListIsSameState(manager.WAITING))
+	return len(FindPlayerListIsSameState(WAITING))
 }
 
 // CreateRoom creates a new room and add player to that room
@@ -88,14 +86,14 @@ func (gManager *GameManager) RemoveRoom(name string) {
 	if gManager.Rooms[name].Waiting {
 		gManager.Rooms[name].StopWaiting()
 	}
-	playerList := manager.FindPlayerListInRoom(name)
+	playerList := FindPlayerListInRoom(name)
 	for _, player := range playerList {
 		var index int
-		index = manager.FindPlayerByUUID(player.UUID)
+		index = FindPlayerByUUID(player.UUID)
 		if gManager.Rooms[name].Waiting {
-			manager.PlayerList[index].State = manager.WAITING
+			PlayerList[index].State = WAITING
 		} else {
-			manager.RemovePlayer(index)
+			RemovePlayer(index)
 		}
 	}
 	delete(gManager.Rooms, name)
@@ -103,7 +101,7 @@ func (gManager *GameManager) RemoveRoom(name string) {
 
 // Match matchs 4 player into a room
 func (gManager *GameManager) Match() []string {
-	waitingList := manager.FindPlayerListIsSameState(manager.WAITING)
+	waitingList := FindPlayerListIsSameState(WAITING)
 	var sample []string
 	for i := 0; i < 4; i++ {
 		index := rand.Int31n(int32(len(waitingList)))
@@ -111,8 +109,8 @@ func (gManager *GameManager) Match() []string {
 		waitingList = append(waitingList[: index], waitingList[index + 1: ]...)
 	}
 	for _, uuid := range sample {
-		index := manager.FindPlayerByUUID(uuid)
-		manager.PlayerList[index].State = manager.MATCHED
+		index := FindPlayerByUUID(uuid)
+		PlayerList[index].State = MATCHED
 	}
 	return sample
 }

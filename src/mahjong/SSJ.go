@@ -1,4 +1,4 @@
-package ssj
+package mahjong
 
 // CalTai cals tai
 func CalTai(hand uint64, door uint64) int {

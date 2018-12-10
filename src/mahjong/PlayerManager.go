@@ -1,4 +1,4 @@
-package manager
+package mahjong
 
 import (
 	"github.com/googollee/go-socket.io"

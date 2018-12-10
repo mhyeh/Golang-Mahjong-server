@@ -1,11 +1,7 @@
-package util
+package mahjong
 
 import (
 	"github.com/googollee/go-socket.io"
-
-	"tile"
-	"manager"
-	"ssj"
 )
 
 // NewPlayer creates a new player
@@ -19,11 +15,11 @@ type Player struct {
 	Credit       int
 	MaxTai       int
 	GonRecord    [4]int
-	Hand         tile.Set
-	Door         tile.Set
-	VisiableDoor tile.Set
-	DiscardTiles tile.Set
-	HuTiles      tile.Set
+	Hand         SuitSet
+	Door         SuitSet
+	VisiableDoor SuitSet
+	DiscardTiles SuitSet
+	HuTiles      SuitSet
 	IsHu         bool
 	IsTing       bool
 	JustGon      bool
@@ -34,26 +30,26 @@ type Player struct {
 
 // Name returns the player's name
 func (player Player) Name() string {
-	index := manager.FindPlayerByUUID(player.UUID)
-	return manager.PlayerList[index].Name
+	index := FindPlayerByUUID(player.UUID)
+	return PlayerList[index].Name
 }
 
 // Room returns the player's room
 func (player Player) Room() string {
-	index := manager.FindPlayerByUUID(player.UUID)
-	return manager.PlayerList[index].Room
+	index := FindPlayerByUUID(player.UUID)
+	return PlayerList[index].Room
 }
 
 // Socket returns the player's socket
 func (player Player) Socket() socketio.Socket {
-	index := manager.FindPlayerByUUID(player.UUID)
-	return *manager.PlayerList[index].Socket
+	index := FindPlayerByUUID(player.UUID)
+	return *PlayerList[index].Socket
 }
 
 // Init inits the player's state
 func (player *Player) Init() {
-	index := manager.FindPlayerByUUID(player.UUID)
-	manager.PlayerList[index].State = manager.PLAYING
+	index := FindPlayerByUUID(player.UUID)
+	PlayerList[index].State = PLAYING
 	for i := 0; i < 3; i++ {
 		player.Door[i]         = 0
 		player.VisiableDoor[i] = 0
@@ -72,22 +68,22 @@ func (player *Player) Init() {
 }
 
 // CheckGon checks if the player can gon
-func (player *Player) CheckGon(tile tile.Tile) bool {
-	if tile.Color == player.Lack {
+func (player *Player) CheckGon(tile Tile) bool {
+	if tile.Suit == player.Lack {
 		return false
 	}
 	if !player.IsHu {
 		return true
 	}
 
-	handCount := int(player.Hand[tile.Color].GetIndex(tile.Value))
-	oldTai    := ssj.CalTai(player.Hand.Translate(player.Lack), player.Door.Translate(player.Lack))
+	handCount := int(player.Hand[tile.Suit].GetIndex(tile.Value))
+	oldTai    := CalTai(player.Hand.Translate(player.Lack), player.Door.Translate(player.Lack))
 
 	for i := 0; i < handCount; i++ {
 		player.Hand.Sub(tile)
 		player.Door.Add(tile)
 	}
-	newTai := ssj.CalTai(player.Hand.Translate(player.Lack), player.Door.Translate(player.Lack))
+	newTai := CalTai(player.Hand.Translate(player.Lack), player.Door.Translate(player.Lack))
 	if newTai > 0 {
 		newTai--
 	}
@@ -99,27 +95,27 @@ func (player *Player) CheckGon(tile tile.Tile) bool {
 }
 
 // CheckPon checks if the player can pon
-func (player *Player) CheckPon(tile tile.Tile) bool {
-	if tile.Color == player.Lack || player.IsHu {
+func (player *Player) CheckPon(tile Tile) bool {
+	if tile.Suit == player.Lack || player.IsHu {
 		return false
 	}
-	return player.Hand[tile.Color].GetIndex(tile.Value) >= 2
+	return player.Hand[tile.Suit].GetIndex(tile.Value) >= 2
 }
 
 // CheckHu checks if the player can hu
-func (player *Player) CheckHu(tile tile.Tile, tai *int) bool {
+func (player *Player) CheckHu(tile Tile, tai *int) bool {
 	*tai = 0
 	if player.Hand[player.Lack].Count() > 0 {
 		return false
 	}
-	if tile.Color == -1 {
-		*tai = ssj.CalTai(player.Hand.Translate(player.Lack), player.Door.Translate(player.Lack))
+	if tile.Suit == -1 {
+		*tai = CalTai(player.Hand.Translate(player.Lack), player.Door.Translate(player.Lack))
 	} else {
-		if tile.Color == player.Lack {
+		if tile.Suit == player.Lack {
 			return false
 		}
 		player.Hand.Add(tile)
-		*tai = ssj.CalTai(player.Hand.Translate(player.Lack), player.Door.Translate(player.Lack))
+		*tai = CalTai(player.Hand.Translate(player.Lack), player.Door.Translate(player.Lack))
 		player.Hand.Sub(tile)
 	}
 	return *tai > 0
@@ -134,7 +130,7 @@ func (player *Player) CheckTing(max *int) bool {
 	for i := uint(0); i < 18; i++ {
 		if ((total >> (i * 3)) & 7) < 4 {
 			newHand := tHand + (1 << (i * 3))
-			tai := ssj.CalTai(newHand, tDoor)
+			tai := CalTai(newHand, tDoor)
 			if tai > *max {
 				*max = tai
 			}
@@ -144,7 +140,7 @@ func (player *Player) CheckTing(max *int) bool {
 }
 
 // Gon gons the tile
-func (player *Player) Gon(tile tile.Tile, visible bool) {
+func (player *Player) Gon(tile Tile, visible bool) {
 	player.JustGon = true
 	for i := 0; i < 4; i++ {
 		player.Door.Add(tile)
@@ -156,7 +152,7 @@ func (player *Player) Gon(tile tile.Tile, visible bool) {
 }
 
 // Pon pons the tile
-func (player *Player) Pon(tile tile.Tile) {
+func (player *Player) Pon(tile Tile) {
 	for i := 0; i < 3; i++ {
 		player.Door.Add(tile)
 		player.VisiableDoor.Add(tile)
@@ -166,9 +162,9 @@ func (player *Player) Pon(tile tile.Tile) {
 }
 
 // Tai cals the tai
-func (player *Player) Tai(tile tile.Tile) int {
+func (player *Player) Tai(tile Tile) int {
 	player.Hand.Add(tile)
-	result := ssj.CalTai(player.Hand.Translate(player.Lack), player.Door.Translate(player.Lack))
+	result := CalTai(player.Hand.Translate(player.Lack), player.Door.Translate(player.Lack))
 	player.Hand.Sub(tile)
 	return result
 }

@@ -1,17 +1,47 @@
-package util
+package mahjong
 
 import (
 	"time"
 	"math"
 	"encoding/json"
-
-	"tile"
-	"action"
 )
 
+// Command type
+const  (
+	NONE   = 0
+	PON    = 1
+	GON    = 2
+	ONGON  = 4
+	PONGON = 8
+	HU     = 16
+	ZIMO   = 32
+)
+
+// NewAction creates a new action
+func NewAction(command int, tile Tile, score int) Action {
+	action := Action {command, tile, score}
+	return action
+}
+
+// NewActionSet creates a new action set
+func NewActionSet() ActionSet {
+	set := make(ActionSet)
+	return set
+}
+
+// Action represent a command made by player
+type Action struct {
+	Command int
+	Tile    Tile
+	Score   int
+}
+
+// ActionSet represents a set of action
+type ActionSet map[int][]Tile
+
 // ChangeTiles emits to client to get the change cards
-func (player *Player) ChangeTiles() []tile.Tile {
-	defaultChange := tile.ArrayToSet(player.defaultChangeCard()).ToStringArray()
+func (player *Player) ChangeTiles() []Tile {
+	defaultChange := ArrayToSuitSet(player.defaultChangeCard()).ToStringArray()
 	waitingTime   := 30 * time.Second
 	t := make([]interface{}, 3)
 	for i := 0; i < 3; i++ {
@@ -20,14 +50,14 @@ func (player *Player) ChangeTiles() []tile.Tile {
 
 	player.Socket().Emit("change", defaultChange, waitingTime / 1000000)
 	val := player.waitForSocket("changeCard", t, waitingTime)
-	var changeTiles []tile.Tile
+	var changeTiles []Tile
 	if player.checkChangeTiles(val) {
 		valArr := val.([]interface{})
 		for i:= 0; i < 3; i++ {
-			changeTiles = append(changeTiles, tile.StringToTile(valArr[i].(string)))
+			changeTiles = append(changeTiles, StringToTile(valArr[i].(string)))
 		}
 	} else {
-		changeTiles = tile.StringArrayToTileArray(defaultChange)
+		changeTiles = StringArrayToTileArray(defaultChange)
 	}
 	player.Hand.Sub(changeTiles)
 	player.room.BroadcastChange(player.ID)
@@ -49,16 +79,16 @@ func (player *Player) ChooseLack() int {
 }
 
 // Throw emits to client to get the throw Tile
-func (player *Player) Throw() tile.Tile {
+func (player *Player) Throw() Tile {
 	defaultTile := player.Hand.At(0).ToString()
 	waitingTime := 10 * time.Second
 	go player.Socket().Emit("throw", defaultTile, waitingTime / 1000000)
 	val := player.waitForSocket("throwCard", defaultTile, waitingTime)
-	var throwTile tile.Tile
+	var throwTile Tile
 	if player.checkThrow(val) {
-		throwTile = tile.StringToTile(val.(string))
+		throwTile = StringToTile(val.(string))
 	} else {
-		throwTile = tile.StringToTile(defaultTile)
+		throwTile = StringToTile(defaultTile)
 	}
 	player.Hand.Sub(throwTile)
 	player.room.BroadcastThrow(player.ID, throwTile)
@@ -66,25 +96,25 @@ func (player *Player) Throw() tile.Tile {
 }
 
 // Draw draws a Tile
-func (player *Player) Draw(drawCard tile.Tile) action.Action {
+func (player *Player) Draw(drawCard Tile) Action {
 	player.Hand.Add(drawCard)
 	player.Socket().Emit("draw", drawCard.ToString())
 
 	var tai int
-	player.CheckHu(tile.Tile {Color: -1, Value: 0}, &tai)
+	player.CheckHu(NewTile(-1, 0), &tai)
 	actionSet, command := player.getAvaliableAction(true, drawCard, tai)
-	playerAct          := action.NewAction(action.NONE, drawCard, 0)
+	playerAct          := NewAction(NONE, drawCard, 0)
 
-	if command == action.NONE {
-		playerAct.Command = action.NONE
+	if command == NONE {
+		playerAct.Command = NONE
 		playerAct.Tile    = drawCard
 	} else if player.IsHu {
-		if (command & action.ZIMO) != 0 {
-			playerAct.Command = action.ZIMO
-		} else if (command & action.ONGON) != 0 {
-			playerAct.Command = action.ONGON
-		} else if (command & action.PONGON) != 0 {
-			playerAct.Command = action.PONGON
+		if (command & ZIMO) != 0 {
+			playerAct.Command = ZIMO
+		} else if (command & ONGON) != 0 {
+			playerAct.Command = ONGON
+		} else if (command & PONGON) != 0 {
+			playerAct.Command = PONGON
 		}
 		playerAct.Tile = actionSet[playerAct.Command][0]
 	} else {
@@ -96,7 +126,7 @@ func (player *Player) Draw(drawCard tile.Tile) action.Action {
 }
 
 // Command emits to client to get command
-func (player *Player) Command(actionSet action.Set, command int) action.Action {
+func (player *Player) Command(actionSet ActionSet, command int) Action {
 	type Tmp struct {
 		Key   int
 		Value []string
@@ -109,12 +139,12 @@ func (player *Player) Command(actionSet action.Set, command int) action.Action {
 
 	var tmpSet []Tmp
 	for key, value := range actionSet {
-		t := tile.ArrayToSet(value)
+		t := ArrayToSuitSet(value)
 		tmp := Tmp {key, t.ToStringArray()}
 		tmpSet = append(tmpSet, tmp)
 	}
 	
-	defaultCommand := TmpAct {action.NONE, "c0", 0}
+	defaultCommand := TmpAct {NONE, "c0", 0}
 	waitingTime    := 10 * time.Second
 	actionJSON, _  := json.Marshal(actionSet)
 	commandJSON, _ := json.Marshal(defaultCommand)
@@ -128,7 +158,7 @@ func (player *Player) Command(actionSet action.Set, command int) action.Action {
 	}
 	var t TmpAct
 	json.Unmarshal([]byte(commandStr), &t)
-	return action.NewAction(t.Command, tile.StringToTile(t.Tile), 0)
+	return NewAction(t.Command, StringToTile(t.Tile), 0)
 }
 
 // Fail emits to client to notice the command is failed
@@ -137,19 +167,19 @@ func (player *Player) Fail(command int) {
 }
 
 // Success emits to client to notice the command is successed
-func (player *Player) Success(from int, command int, Tile tile.Tile, score int) {
+func (player *Player) Success(from int, command int, Tile Tile, score int) {
 	player.Socket().Emit("success", from, command, Tile.ToString(), score)
 	player.room.BroadcastCommand(from, player.ID, command, Tile, score)
 }
 
-func (player *Player) defaultChangeCard() []tile.Tile {
-	var result []tile.Tile;
+func (player *Player) defaultChangeCard() []Tile {
+	var result []Tile;
 	count := 0;
 	for c := 0; c < 3 && count < 3; c++ {
 		if (player.Hand[c].Count()) >= 3 {
 			for v := uint(0); count < 3 && v < 9; v++ {
 				for n := uint(0); count < 3 && n < player.Hand[c].GetIndex(v); n++ {
-					result = append(result, tile.Tile {Color: c, Value: v})
+					result = append(result, Tile {Suit: c, Value: v})
 					count++;
 				}
 			}
@@ -174,8 +204,8 @@ func (player *Player) waitForSocket(eventName string, defaultValue interface{}, 
 	return val
 }
 
-func (player *Player) getAvaliableAction(isDraw bool, Tile tile.Tile, tai int) (action.Set, int) {
-	actionSet := action.NewSet()
+func (player *Player) getAvaliableAction(isDraw bool, Tile Tile, tai int) (ActionSet, int) {
+	actionSet := NewActionSet()
 	command   := 0
 
 	if isDraw {
@@ -186,25 +216,25 @@ func (player *Player) getAvaliableAction(isDraw bool, Tile tile.Tile, tai int) (
 	return actionSet, command
 }
 
-func (player *Player) checkDrawAction(Tile tile.Tile, tai int) (action.Set, int) {
-	actionSet := action.NewSet()
+func (player *Player) checkDrawAction(Tile Tile, tai int) (ActionSet, int) {
+	actionSet := NewActionSet()
 	command   := 0
 	if tai > 0 {
-		command |= action.ZIMO
-		actionSet[action.ZIMO] = append(actionSet[action.ZIMO], Tile)
+		command |= ZIMO
+		actionSet[ZIMO] = append(actionSet[ZIMO], Tile)
 	}
-	for c := 0; c < 3; c++ {
+	for s := 0; s < 3; s++ {
 		for v :=uint(0); v < 9; v++ {
-			tmpCard := tile.Tile {Color: c, Value: v}
-			if player.Hand[c].GetIndex(v) == 4 {
+			tmpCard := NewTile(s, v)
+			if player.Hand[s].GetIndex(v) == 4 {
 				if player.CheckGon(tmpCard) {
-					command |= action.ONGON
-					actionSet[action.ONGON] = append(actionSet[action.ONGON], tmpCard)
+					command |= ONGON
+					actionSet[ONGON] = append(actionSet[ONGON], tmpCard)
 				}
-			} else if player.Hand[c].GetIndex(v) == 1 && player.Door[c].GetIndex(v) == 3 {
+			} else if player.Hand[s].GetIndex(v) == 1 && player.Door[s].GetIndex(v) == 3 {
 				if player.CheckGon(tmpCard) {
-					command |= action.PONGON
-					actionSet[action.PONGON] = append(actionSet[action.PONGON], tmpCard)
+					command |= PONGON
+					actionSet[PONGON] = append(actionSet[PONGON], tmpCard)
 				}
 			}
 		}
@@ -212,32 +242,32 @@ func (player *Player) checkDrawAction(Tile tile.Tile, tai int) (action.Set, int)
 	return actionSet, command
 }
 
-func (player *Player) checkNonDrawAction(Tile tile.Tile, tai int) (action.Set, int) {
-	actionSet := action.NewSet()
+func (player *Player) checkNonDrawAction(Tile Tile, tai int) (ActionSet, int) {
+	actionSet := NewActionSet()
 	command := 0
 	if tai > 0 {
-		command |= action.HU
-		actionSet[action.HU] = append(actionSet[action.HU], Tile)
+		command |= HU
+		actionSet[HU] = append(actionSet[HU], Tile)
 	}
-	if player.Hand[Tile.Color].GetIndex(Tile.Value) == 3 {
+	if player.Hand[Tile.Suit].GetIndex(Tile.Value) == 3 {
 		if player.CheckGon(Tile) {
-			command |= action.GON
-			actionSet[action.GON] = append(actionSet[action.GON], Tile)
+			command |= GON
+			actionSet[GON] = append(actionSet[GON], Tile)
 		}
 	}
 	if player.CheckPon(Tile) {
-		command |= action.PON
-		actionSet[action.PON] = append(actionSet[action.PON], Tile)
+		command |= PON
+		actionSet[PON] = append(actionSet[PON], Tile)
 	}
 	return actionSet, command
 }
 
-func (player *Player) procDrawCommand(drawCard tile.Tile, act *action.Action, tai int) {
-	if (act.Command & action.ZIMO) != 0 {
+func (player *Player) procDrawCommand(drawCard Tile, act *Action, tai int) {
+	if (act.Command & ZIMO) != 0 {
 		player.ziMo(act, tai)
-	} else if (act.Command & action.ONGON) != 0 {
+	} else if (act.Command & ONGON) != 0 {
 		player.onGon(act)
-	} else if (act.Command & action.PONGON) != 0 {
+	} else if (act.Command & PONGON) != 0 {
 		player.onGon(act)
 	} else {
 		if player.IsHu {
@@ -250,7 +280,7 @@ func (player *Player) procDrawCommand(drawCard tile.Tile, act *action.Action, ta
 	}
 }
 
-func (player *Player) ziMo(action *action.Action, tai int) {
+func (player *Player) ziMo(action *Action, tai int) {
 	player.IsHu = true
 	player.HuTiles.Add(action.Tile)
 	player.room.HuTiles.Add(action.Tile)
@@ -272,7 +302,7 @@ func (player *Player) ziMo(action *action.Action, tai int) {
 	}
 } 
 
-func (player *Player) onGon(action *action.Action) {
+func (player *Player) onGon(action *Action) {
 	player.Gon(action.Tile, false)
 	action.Score = 2
 	for i := 0; i < 4; i++ {
@@ -284,7 +314,7 @@ func (player *Player) onGon(action *action.Action) {
 	}
 } 
 
-func (player *Player) ponGon(action *action.Action) {
+func (player *Player) ponGon(action *Action) {
 	player.Gon(action.Tile, true)
 	action.Score = 1
 	for i := 0; i < 4; i++ {

@@ -1,9 +1,4 @@
-package util
-
-import (
-	"tile"
-	"action"
-)
+package mahjong
 
 // BroadcastRemainCard broadcasts remain card
 func (room Room) BroadcastRemainCard(num uint) {
@@ -41,13 +36,13 @@ func (room Room) BroadcastDraw(id int) {
 }
 
 // BroadcastThrow broadcasts the player's id and the card he threw
-func (room Room) BroadcastThrow(id int, tile tile.Tile) {
+func (room Room) BroadcastThrow(id int, tile Tile) {
 	room.IO.BroadcastTo(room.Name, "broadcastThrow", id, tile.ToString())
 }
 
 // BroadcastCommand broadcasts the player's id and the command he made
-func (room Room) BroadcastCommand(from int, to int, command int, tile tile.Tile, score int) {
-	if command == action.ONGON {
+func (room Room) BroadcastCommand(from int, to int, command int, tile Tile, score int) {
+	if command == ONGON {
 		room.IO.BroadcastTo(room.Name, "broadcastCommand", from, to, command, "", score)
 	} else {
 		room.IO.BroadcastTo(room.Name, "broadcastCommand", from, to, command, tile.ToString(), score)

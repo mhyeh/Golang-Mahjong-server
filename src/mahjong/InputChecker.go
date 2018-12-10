@@ -1,10 +1,7 @@
-package util
+package mahjong
 
 import (
 	"encoding/json"
-	
-	"tile"
-	"action"
 )
 
 func (player *Player) checkChangeTiles(val interface{}) bool {
@@ -15,7 +12,7 @@ func (player *Player) checkChangeTiles(val interface{}) bool {
 	}
 	valArr := val.([]interface{})
 	for i:= 0; i < 3; i++ {
-		if !tile.IsValidTile(valArr[i].(string)) {
+		if !IsValidTile(valArr[i].(string)) {
 			return false
 		}
 	}
@@ -35,7 +32,7 @@ func (player *Player) checkLack(val interface{}) bool {
 func (player *Player) checkThrow(val interface{}) bool {
 	switch val.(type) {
 	case string:
-		return tile.IsValidTile(val.(string))
+		return IsValidTile(val.(string))
 	default:
 		return false
 	}
@@ -57,8 +54,8 @@ func (player *Player) checkCommand(val interface{}) bool {
 	if err != nil {
 		return false
 	}
-	if t.Command != action.NONE && t.Command & (action.PON | action.GON | action.ONGON | action.PONGON | action.HU | action.ZIMO) == 0 {
+	if t.Command != NONE && t.Command & (PON | GON | ONGON | PONGON | HU | ZIMO) == 0 {
 		return false
 	}
-	return tile.IsValidTile(t.Tile)
+	return IsValidTile(t.Tile)
 }
