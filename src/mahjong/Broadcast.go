@@ -42,7 +42,7 @@ func (room Room) BroadcastThrow(id int, tile Tile) {
 
 // BroadcastCommand broadcasts the player's id and the command he made
 func (room Room) BroadcastCommand(from int, to int, command int, tile Tile, score int) {
-	if command == ONGON {
+	if command == COMMAND["ONGON"] {
 		room.IO.BroadcastTo(room.Name, "broadcastCommand", from, to, command, "", score)
 	} else {
 		room.IO.BroadcastTo(room.Name, "broadcastCommand", from, to, command, tile.ToString(), score)

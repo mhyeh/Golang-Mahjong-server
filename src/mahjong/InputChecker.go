@@ -11,7 +11,7 @@ func (player *Player) checkChangeTiles(val interface{}) bool {
 		return false
 	}
 	valArr := val.([]interface{})
-	for i:= 0; i < 3; i++ {
+	for i := 0; i < 3; i++ {
 		if !IsValidTile(valArr[i].(string)) {
 			return false
 		}
@@ -54,8 +54,11 @@ func (player *Player) checkCommand(val interface{}) bool {
 	if err != nil {
 		return false
 	}
-	if t.Command != NONE && t.Command & (PON | GON | ONGON | PONGON | HU | ZIMO) == 0 {
-		return false
+	flag := false
+	for _, command := range COMMAND {
+		if t.Command == command {
+			flag = true
+		}
 	}
-	return IsValidTile(t.Tile)
+	return flag && IsValidTile(t.Tile)
 }

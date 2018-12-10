@@ -94,11 +94,10 @@ func (suitSet SuitSet) Translate(lack int) uint64 {
 // ToStringArray converts suit set to string array
 func (suitSet SuitSet) ToStringArray() []string {
 	var result []string
-	colorChar := [3]string {"c", "d", "b"}
-	for c := 0; c < 3; c++ {
+	for s := 0; s < 3; s++ {
 		for v := uint(0); v < 9; v++ {
-			for n := uint(0); n < suitSet[c].GetIndex(v); n++ {
-				result = append(result, colorChar[c] + strconv.Itoa(int(v + 1)))
+			for n := uint(0); n < suitSet[s].GetIndex(v); n++ {
+				result = append(result, suitStr[s] + strconv.Itoa(int(v + 1)))
 			}
 		}
 	}
