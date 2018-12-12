@@ -3,16 +3,26 @@ package mahjong
 import (
 	"math/rand"
 	"time"
+	"log"
 
 	"github.com/googollee/go-socket.io";
 	"github.com/satori/go.uuid";
 )
 
+var game *GameManager
 // NewGameManager creates a new gameManager
-func NewGameManager() GameManager {
+func NewGameManager() (bool) {
+	server, err := socketio.NewServer(nil)
+	if err != nil {
+		log.Fatal(err)
+		return true
+	}
+
+	go InitHuTable()
+
 	rooms := make(map[string]*Room)
-	game  := GameManager {rooms, nil}
-	return game
+	game   = &GameManager {rooms, server}
+	return false
 }
 
 // GameManager represents a gameManager
@@ -21,21 +31,25 @@ type GameManager struct {
 	Server *socketio.Server
 }
 
+func GetServer() *socketio.Server {
+	return game.Server
+}
+
 // Login handles player's login
-func (game *GameManager) Login(name string, socket socketio.Socket) (string, bool) {
+func Login(name string, socket *socketio.Socket) (string, bool) {
 	uuid, err := AddPlayer(name)
 	if err {
 		return "", true
 	}
 	index := FindPlayerByUUID(uuid)
-	PlayerList[index].Socket = &socket
+	PlayerList[index].Socket = socket
 	PlayerList[index].State  = WAITING
 
 	return uuid, false
 }
 
 // Logout handles player's logout
-func (game *GameManager) Logout(socket socketio.Socket) {
+func Logout(socket socketio.Socket) {
 	index := FindPlayerBySocket(socket)
 	if index >= 0 && index < len(PlayerList) {
 		if PlayerList[index].State == WAITING {
@@ -49,10 +63,10 @@ func (game *GameManager) Logout(socket socketio.Socket) {
 }
 
 // Exec executes the whole game
-func (game *GameManager) Exec() {
+func Exec() {
 	for {
-		if game.WaitingNum() >= 4 {
-			go game.CreateRoom()
+		if WaitingNum() >= 4 {
+			go CreateRoom()
 			time.Sleep(2 * time.Second)
 		}
 		time.Sleep(5 * time.Second)
@@ -60,12 +74,12 @@ func (game *GameManager) Exec() {
 }
 
 // WaitingNum returns the number of player which state are waiting
-func (game *GameManager) WaitingNum() int {
+func WaitingNum() int {
 	return len(FindPlayerListIsSameState(WAITING))
 }
 
 // CreateRoom creates a new room and add player to that room
-func (game *GameManager) CreateRoom() {
+func CreateRoom() {
 	var roomName string
 	for {
 		roomName = uuid.Must(uuid.NewV4()).String()
@@ -73,16 +87,16 @@ func (game *GameManager) CreateRoom() {
 			break
 		}
 	}
-	matchPlayer := game.Match()
+	matchPlayer := Match()
 	game.Rooms[roomName]    = NewRoom(roomName)
 	game.Rooms[roomName].IO = game.Server
 	game.Rooms[roomName].AddPlayer(matchPlayer)
 	game.Rooms[roomName].WaitToStart()
-	game.RemoveRoom(roomName)
+	RemoveRoom(roomName)
 }
 
 // RemoveRoom removes a room by room name
-func (game *GameManager) RemoveRoom(name string) {
+func RemoveRoom(name string) {
 	if game.Rooms[name].Waiting {
 		game.Rooms[name].StopWaiting()
 	}
@@ -100,7 +114,7 @@ func (game *GameManager) RemoveRoom(name string) {
 }
 
 // Match matchs 4 player into a room
-func (game *GameManager) Match() []string {
+func Match() []string {
 	waitingList := FindPlayerListIsSameState(WAITING)
 	var sample []string
 	for i := 0; i < 4; i++ {
