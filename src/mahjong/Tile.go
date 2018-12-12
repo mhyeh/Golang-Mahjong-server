@@ -24,10 +24,7 @@ var suitMap = map[string]int {
 
 // ToString converts tile to string
 func (tile Tile) ToString() string {
-	if tile.Suit < 0 || tile.Suit >= 3 {
-		return ""
-	}
-	return suitStr[tile.Suit] + strconv.Itoa(int(tile.Value + 1))
+	return IF(tile.Suit < 0 || tile.Suit >= 3, "", suitStr[tile.Suit] + strconv.Itoa(int(tile.Value + 1))).(string)
 }
 
 // StringArrayToTileArray converts string array to tile array
@@ -55,11 +52,7 @@ func StringToTile(tile string) Tile {
 			break
 		}
 	}
-	if !flag || v < 1 {
-		return NewTile(-1, 0)
-	}
-
-	return NewTile(suitMap[s], uint(v - 1))
+	return IF(!flag || v < 1, NewTile(-1, 0), NewTile(suitMap[s], uint(v - 1))).(Tile)
 }
 
 // IsValidTile checks if tile string is vaild
