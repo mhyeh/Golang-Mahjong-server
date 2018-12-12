@@ -5,10 +5,12 @@ import (
 	"log"
 )
 
+// SocketError is callback of socket error event
 func SocketError(so socketio.Socket, err error) {
 	log.Println("error:", err)
 }
 
+// SocketConnect is callback of socket connect event
 func SocketConnect(so socketio.Socket) {
 	log.Println("on connection")
 
@@ -88,7 +90,10 @@ func getRoomInfo(uuid string) (string, []string, bool) {
 }
 
 func getReadyPlayer(room string) []string {
-	return IF(game.Rooms[room] == nil, []string{}, game.Rooms[room].GetReadyPlayers()).([]string)
+	if game.Rooms[room] == nil {
+		return []string{}
+	}
+	return game.Rooms[room].GetReadyPlayers()
 }
 
 func getHand(uuid string, room string) []string {
@@ -105,23 +110,38 @@ func getID(uuid string, room string) int {
 		return -1
 	}
 	index := FindPlayerByUUID(uuid)
-	return IF(PlayerList[index].State != READY, -1, PlayerList[index].Index).(int)
+	if PlayerList[index].State != READY {
+		return -1
+	}
+	return PlayerList[index].Index
 }
 
 func getPlayerList(room string) []string {
-	return IF(game.Rooms[room] == nil, []string{}, game.Rooms[room].GetPlayerList()).([]string)
+	if game.Rooms[room] == nil {
+		return []string{}
+	}
+	return game.Rooms[room].GetPlayerList()
 }
 
 func getLack(room string) []int {
-	return IF(game.Rooms[room] == nil, []int{}, game.Rooms[room].GetLack()).([]int)
+	if game.Rooms[room] == nil {
+		return []int{}
+	}
+	return game.Rooms[room].GetLack()
 }
 
 func getHandCount(room string) []int {
-	return IF(game.Rooms[room] == nil, []int{}, game.Rooms[room].GetHandCount()).([]int)
+	if game.Rooms[room] == nil {
+		return []int{}
+	}
+	return game.Rooms[room].GetHandCount()
 }
 
 func getRemainCount(room string) int {
-	return IF(game.Rooms[room] == nil, 56, game.Rooms[room].GetRemainCount()).(int)
+	if game.Rooms[room] == nil {
+		return 56
+	}
+	return game.Rooms[room].GetRemainCount()
 }
 
 func getDoor(uuid string, room string) ([][]string, []int, bool) {
@@ -148,9 +168,15 @@ func getHu(room string) ([][]string, bool) {
 }
 
 func getCurrentIdx(room string) int {
-	return IF(game.Rooms[room] == nil, -1, game.Rooms[room].GetCurrentIdx()).(int)
+	if game.Rooms[room] == nil {
+		return -1
+	}
+	return game.Rooms[room].GetCurrentIdx()
 }
 
 func getScore(room string) []int {
-	return IF(game.Rooms[room] == nil, []int{}, game.Rooms[room].GetScore()).([]int)
+	if game.Rooms[room] == nil {
+		return []int{}
+	}
+	return game.Rooms[room].GetScore()
 }

@@ -13,7 +13,7 @@ func NewSuitSet(full bool) SuitSet {
 	var suitSet SuitSet
 	t, _ := strconv.ParseUint("100100100100100100100100100", 2, 32)
 	for s := 0; s < 3; s++ {
-		suitSet[s] = IF(full, t, 0).(Suit)
+		suitSet[s] = IF(full, Suit(t), Suit(0)).(Suit)
 	}
 	return suitSet
 }

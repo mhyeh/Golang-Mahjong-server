@@ -42,7 +42,7 @@ func (act Action) ToJSON() string {
 		Tile    string
 		Score   int
 	}
-	tmp     := Tmp{act.Command, act.Tile.ToString(), act.Score}
+	tmp     := Tmp {act.Command, act.Tile.ToString(), act.Score}
 	JSON, _ := json.Marshal(tmp)
 	return string(JSON)
 }
@@ -109,7 +109,11 @@ func (player *Player) ChooseLack() int {
 	waitingTime := 10 * time.Second
 	go player.Socket().Emit("lack", defaultLack, waitingTime / microSec)
 	val        := player.waitForSocket("chooseLack", defaultLack, waitingTime)
-	player.Lack = IF(player.checkLack(val), int(val.(float64)), 0).(int)
+	if (player.checkLack(val)) {
+		player.Lack = int(val.(float64))
+	} else {
+		player.Lack = 0
+	}
 	return player.Lack
 }
 
@@ -119,7 +123,12 @@ func (player *Player) Throw() Tile {
 	waitingTime := 10 * time.Second
 	go player.Socket().Emit("throw", defaultTile, waitingTime / microSec)
 	val       := player.waitForSocket("throwCard", defaultTile, waitingTime)
-	throwTile := StringToTile(IF(player.checkThrow(val), val.(string), defaultTile).(string))
+	var throwTile Tile
+	if player.checkThrow(val) {
+		throwTile = StringToTile(val.(string))
+	} else {
+		throwTile = StringToTile(defaultTile)
+	}
 	player.Hand.Sub(throwTile)
 	player.room.BroadcastThrow(player.ID, throwTile)
 	return throwTile
@@ -161,7 +170,11 @@ func (player *Player) Command(actionSet ActionSet, command int) Action {
 	waitingTime    := 10 * time.Second
 	go player.Socket().Emit("command", actionSet.ToJSON(), command, waitingTime / microSec)
 	val := player.waitForSocket("sendCommand", defaultCommand, waitingTime)
-	return JSONToAction(IF(player.checkCommand(val), val.(string), defaultCommand).(string))
+	if player.checkCommand(val) {
+		return JSONToAction(val.(string))
+	} else {
+		return JSONToAction(defaultCommand)
+	}
 }
 
 // Fail emits to client to notice the command is failed

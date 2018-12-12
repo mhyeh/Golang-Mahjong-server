@@ -31,6 +31,7 @@ type GameManager struct {
 	Server *socketio.Server
 }
 
+// GetServer returns socket io server
 func GetServer() *socketio.Server {
 	return game.Server
 }
