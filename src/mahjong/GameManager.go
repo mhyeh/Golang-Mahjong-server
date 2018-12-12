@@ -104,8 +104,8 @@ func (game *GameManager) Match() []string {
 	waitingList := FindPlayerListIsSameState(WAITING)
 	var sample []string
 	for i := 0; i < 4; i++ {
-		index := rand.Int31n(int32(len(waitingList)))
-		sample = append(sample, waitingList[index].UUID)
+		index      := rand.Int31n(int32(len(waitingList)))
+		sample      = append(sample, waitingList[index].UUID)
 		waitingList = append(waitingList[: index], waitingList[index + 1: ]...)
 	}
 	for _, uuid := range sample {

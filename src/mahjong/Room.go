@@ -91,7 +91,7 @@ func (room *Room) Accept(uuid string, callback func(int)) {
 		return
 	}
 	player := PlayerList[index]
-	idx := room.NumPlayer()
+	idx    := room.NumPlayer()
 	room.BroadcastReady(player.Name)
 	callback(idx)
 	player.Index = idx

@@ -1,6 +1,8 @@
 package mahjong
 
 import (
+	"math"
+
 	"github.com/googollee/go-socket.io"
 )
 
@@ -139,16 +141,49 @@ func (player *Player) CheckTing(max *int) bool {
 	return *max > 0
 }
 
-// Gon gons the tile
-func (player *Player) Gon(tile Tile, visible bool) {
-	player.JustGon = true
+// Hu hus tile tile
+func (player *Player) Hu(tile Tile, tai int, Type int, addOneTai, addToRoom bool, fromID int) int {
+	player.IsHu = true
+	player.HuTiles.Add(tile)
+	if Type == COMMAND["ZIMO"] {
+		player.Hand.Sub(tile)
+	}
+	if addToRoom {
+		player.room.HuTiles.Add(tile)
+	}
+	Tai   := IF(addOneTai,      tai + 1, tai).(int)
+	Tai    = IF(player.JustGon, Tai + 1, Tai).(int)
+	score := int(math.Pow(2, float64(Tai - 1)))
 	for i := 0; i < 4; i++ {
+		if Type == COMMAND["ZIMO"] && i != player.ID || Type == COMMAND["HU"] && i == fromID {
+			player.Credit += score
+			player.room.Players[i].Credit -= score
+		}
+	}
+	player.MaxTai = IF(player.MaxTai < tai, tai, player.MaxTai).(int)
+	return score
+}
+
+// Gon gons the tile
+func (player *Player) Gon(tile Tile, Type int, fromID int) int {
+	player.JustGon = true
+	for i := 0; i < IF(Type == COMMAND["PONGON"], 1, 4).(int); i++ {
 		player.Door.Add(tile)
-		if visible {
+		if Type == COMMAND["ONGON"] {
 			player.VisiableDoor.Add(tile)
 		}
 		player.Hand.Sub(tile)
 	}
+
+	score := IF(Type == COMMAND["PONGON"], 1, 2).(int)
+	for i := 0; i < 4; i++ {
+		if Type != COMMAND["GON"] && i != player.ID || Type == COMMAND["GON"] && i == fromID {
+			player.Credit                 += score
+			player.GonRecord[i]           += score
+			player.room.Players[i].Credit -= score
+		}
+	}
+	return score
 }
 
 // Pon pons the tile

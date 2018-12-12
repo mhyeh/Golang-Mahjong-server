@@ -54,7 +54,7 @@ func AddPlayer(name string) (string, bool) {
 		return "", true
 	}
 	var _uuid string
-	for ;; {
+	for {
 		_uuid = uuid.Must(uuid.NewV4()).String()
 		if FindPlayerByUUID(_uuid) == -1 {
 			break

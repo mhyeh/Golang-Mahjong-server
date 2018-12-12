@@ -94,7 +94,7 @@ func (room *Room) checkAction(currentIdx int, playerAct Action, throwCard Tile) 
 
 	if (playerAct.Command & COMMAND["PONGON"]) != 0 {
 		fail = room.checkRobGon(currentIdx, playerAct.Tile, &huIdx)
-	} else if (playerAct.Command&COMMAND["ZIMO"]) == 0 && (playerAct.Command&COMMAND["ONGON"]) == 0 {
+	} else if (playerAct.Command & COMMAND["ZIMO"]) == 0 && (playerAct.Command & COMMAND["ONGON"]) == 0 {
 		room.checkOthers(currentIdx, throwCard, &huIdx, &gonIdx, &ponIdx)
 	}
 
@@ -112,7 +112,7 @@ func (room *Room) checkRobGon(currentIdx int, gonCard Tile, huIdx *int) bool {
 			actionSet := NewActionSet()
 			actionSet[COMMAND["HU"]] = append(actionSet[COMMAND["HU"]], gonCard)
 			go func(i int) {
-				playersAct[i-1] = room.Players[i].Command(actionSet, COMMAND["HU"])
+				playersAct[i - 1] = room.Players[i].Command(actionSet, COMMAND["HU"])
 				waitGroup.Done()
 			}(i)
 		} else {
@@ -132,15 +132,11 @@ func (room *Room) robGon(currentIdx int, playersAct [3]Action, huTile Tile, huId
 		if (playerAct.Command & COMMAND["HU"]) != 0 {
 			tai := 0
 			room.Players[id].CheckHu(huTile, &tai)
-			score := int(math.Pow(2, float64(tai)))
-			curPlayer.Credit        -= score
-			room.Players[id].Credit += score
-			room.Players[id].HuTiles.Add(huTile)
+			score := room.Players[id].Hu(huTile, tai, COMMAND["HU"], true, !fail, currentIdx)
 			room.Players[id].Success(currentIdx, COMMAND["HU"], huTile, score)
 			if !fail {
 				curPlayer.Door.Sub(huTile)
 				curPlayer.VisiableDoor.Sub(huTile)
-				room.HuTiles.Add(huTile)
 			}
 			*huIdx = id
 			fail   = true
@@ -189,22 +185,8 @@ func (room *Room) checkOthers(currentIdx int, throwTile Tile, huIdx *int, gonIdx
 		otherPlayer.CheckHu(throwTile, &tai)
 
 		if (playerAct.Command & COMMAND["HU"]) != 0 {
-			otherPlayer.IsHu = true
-			otherPlayer.HuTiles.Add(playerAct.Tile)
-			if *huIdx == -1 {
-				room.HuTiles.Add(playerAct.Tile)
-			}
+			score := otherPlayer.Hu(playerAct.Tile, tai, COMMAND["HU"], false, *huIdx == -1, currentIdx)
 			*huIdx = playerID
-			Tai   := tai
-			if room.Players[currentIdx].JustGon {
-				Tai++
-			}
-			score := int(math.Pow(2, float64(Tai-1)))
-			otherPlayer.Credit += score
-			if otherPlayer.MaxTai < tai {
-				otherPlayer.MaxTai = tai
-			}
-			room.Players[currentIdx].Credit -= score
 			otherPlayer.Success(currentIdx, COMMAND["HU"], playerAct.Tile, score)
 		} else if (playerAct.Command & COMMAND["GON"]) != 0 {
 			if *huIdx == -1 && *gonIdx == -1 {
@@ -223,7 +205,6 @@ func (room *Room) checkOthers(currentIdx int, throwTile Tile, huIdx *int, gonIdx
 }
 
 func (room *Room) doAction(currentIdx int, throwTile Tile, huIdx int, gonIdx int, ponIdx int) (int, bool) {
-	curPlayer := room.Players[currentIdx]
 	onlyThrow := false
 
 	if huIdx != -1 {
@@ -235,11 +216,8 @@ func (room *Room) doAction(currentIdx int, throwTile Tile, huIdx int, gonIdx int
 			room.Players[ponIdx].Fail(COMMAND["PON"])
 		}
 	} else if gonIdx != -1 {
-		room.Players[gonIdx].Success(currentIdx, COMMAND["GON"], throwTile, 2)
-		room.Players[gonIdx].Gon(throwTile, true)
-		room.Players[gonIdx].Credit += 2
-		room.Players[gonIdx].GonRecord[currentIdx] += 2
-		curPlayer.Credit -= 2
+		score := room.Players[gonIdx].Gon(throwTile, COMMAND["GON"], currentIdx)
+		room.Players[gonIdx].Success(currentIdx, COMMAND["GON"], throwTile, score)
 		currentIdx = gonIdx
 	} else if ponIdx != -1 {
 		room.Players[ponIdx].Success(currentIdx, COMMAND["PON"], throwTile, 0)
@@ -282,12 +260,13 @@ func (room *Room) huUnder2() bool {
 }
 
 func (room *Room) lackPenalty() {
+	score := 16
 	for i := 0; i < 4; i++ {
 		if room.Players[i].Hand.IsContainColor(room.Players[i].Lack) {
 			for j := 0; j < 4; j++ {
 				if room.Players[j].Hand[room.Players[j].Lack].Count() == 0 && i != j {
-					room.Players[i].Credit -= 16
-					room.Players[j].Credit += 16
+					room.Players[i].Credit -= score
+					room.Players[j].Credit += score
 				}
 			}
 		}
@@ -299,8 +278,9 @@ func (room *Room) noTingPenalty() {
 		if !room.Players[i].IsTing && !room.Players[i].IsHu {
 			for j := 0; j < 4; j++ {
 				if room.Players[j].IsTing && i != j {
-					room.Players[i].Credit -= int(math.Pow(2, float64(room.Players[j].MaxTai - 1)))
-					room.Players[j].Credit += int(math.Pow(2, float64(room.Players[j].MaxTai - 1)))
+					score := int(math.Pow(2, float64(room.Players[j].MaxTai - 1)))
+					room.Players[i].Credit -= score
+					room.Players[j].Credit += score
 				}
 			}
 		}
@@ -312,8 +292,9 @@ func (room *Room) returnMoney() {
 		if !room.Players[i].IsTing && !room.Players[i].IsHu {
 			for j := 0; j < 4; j++ {
 				if i != j {
-					room.Players[i].Credit -= room.Players[i].GonRecord[j]
-					room.Players[j].Credit += room.Players[i].GonRecord[j]
+					score := room.Players[i].GonRecord[j]
+					room.Players[i].Credit -= score
+					room.Players[j].Credit += score
 				}
 			}
 		}
