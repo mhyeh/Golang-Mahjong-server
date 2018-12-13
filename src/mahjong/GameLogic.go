@@ -1,7 +1,6 @@
 package mahjong
 
 import (
-	"encoding/json"
 	"math"
 	"math/rand"
 	"sync"
@@ -240,8 +239,7 @@ func (room *Room) end() {
 	for _, player := range room.Players {
 		data = append(data, GameResult {player.Hand.ToStringArray(), player.Door.ToStringArray(), player.Credit})
 	}
-	result, _ := json.Marshal(data)
-	room.BroadcastEnd(string(result))
+	room.BroadcastEnd(data)
 	players := FindPlayerListInRoom(room.Name)
 	for _, player := range players {
 		player.State = WAITING

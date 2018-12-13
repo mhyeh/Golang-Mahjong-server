@@ -1,5 +1,9 @@
 package mahjong
 
+import (
+	"encoding/json"
+)
+
 // BroadcastRemainCard broadcasts remain card
 func (room Room) BroadcastRemainCard(num uint) {
 	room.IO.BroadcastTo(room.Name, "remainCard", num)
@@ -50,8 +54,9 @@ func (room Room) BroadcastCommand(from int, to int, command int, tile Tile, scor
 }
 
 // BroadcastEnd broadcasts the game result
-func (room Room) BroadcastEnd(data string) {
-	room.IO.BroadcastTo(room.Name, "end", data)
+func (room Room) BroadcastEnd(data []GameResult) {
+	result, _ := json.Marshal(data)
+	room.IO.BroadcastTo(room.Name, "end", string(result))
 }
 
 // BroadcastRobGon broadcasts rob gon

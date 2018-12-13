@@ -108,7 +108,7 @@ func (player *Player) ChooseLack() int {
 	defaultLack := float64(0)
 	waitingTime := 10 * time.Second
 	go player.Socket().Emit("lack", defaultLack, waitingTime / microSec)
-	val        := player.waitForSocket("chooseLack", defaultLack, waitingTime)
+	val := player.waitForSocket("chooseLack", defaultLack, waitingTime)
 	if (player.checkLack(val)) {
 		player.Lack = int(val.(float64))
 	} else {
@@ -122,7 +122,7 @@ func (player *Player) Throw() Tile {
 	defaultTile := player.Hand.At(0).ToString()
 	waitingTime := 10 * time.Second
 	go player.Socket().Emit("throw", defaultTile, waitingTime / microSec)
-	val       := player.waitForSocket("throwCard", defaultTile, waitingTime)
+	val := player.waitForSocket("throwCard", defaultTile, waitingTime)
 	var throwTile Tile
 	if player.checkThrow(val) {
 		throwTile = StringToTile(val.(string))
