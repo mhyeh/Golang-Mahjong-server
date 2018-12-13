@@ -1,6 +1,6 @@
 # Mahjong server
 
-A mahjong server based on Golang
+A Mahjong server written with Golang
 
 ## Files
 
