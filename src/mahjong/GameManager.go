@@ -12,7 +12,7 @@ import (
 var game *GameManager
 // NewGameManager creates a new gameManager
 func NewGameManager() (bool) {
-	server, err := socketio.NewServer(nil)
+	server, err := socketio.NewServer([]string{"websocket"})
 	if err != nil {
 		log.Fatal(err)
 		return true

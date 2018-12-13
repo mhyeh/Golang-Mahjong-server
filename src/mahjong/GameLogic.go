@@ -20,6 +20,7 @@ const (
 // GameResult represents the result of mahjong
 type GameResult struct {
 	Hand  []string
+	Door  []string
 	Score int
 }
 
@@ -237,10 +238,10 @@ func (room *Room) end() {
 
 	var data []GameResult
 	for _, player := range room.Players {
-		data = append(data, GameResult{player.Hand.ToStringArray(), player.Credit})
+		data = append(data, GameResult {player.Hand.ToStringArray(), player.Door.ToStringArray(), player.Credit})
 	}
-	b, _ := json.Marshal(data)
-	room.BroadcastEnd(string(b))
+	result, _ := json.Marshal(data)
+	room.BroadcastEnd(string(result))
 	players := FindPlayerListInRoom(room.Name)
 	for _, player := range players {
 		player.State = WAITING

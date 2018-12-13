@@ -32,7 +32,7 @@ func (room Room) BroadcastLack() {
 
 // BroadcastDraw broadcasts the player's id who draw a card
 func (room Room) BroadcastDraw(id int) {
-	room.IO.BroadcastTo(room.Name, "broadcastDraw", id)
+	room.IO.BroadcastTo(room.Name, "broadcastDraw", id, room.Players[id].Hand.ToStringArray())
 }
 
 // BroadcastThrow broadcasts the player's id and the card he threw
@@ -52,4 +52,9 @@ func (room Room) BroadcastCommand(from int, to int, command int, tile Tile, scor
 // BroadcastEnd broadcasts the game result
 func (room Room) BroadcastEnd(data string) {
 	room.IO.BroadcastTo(room.Name, "end", data)
+}
+
+// BroadcastRobGon broadcasts rob gon
+func (room Room) BroadcastRobGon(id int, tile Tile) {
+	room.IO.BroadcastTo(room.Name, "robGon", id, tile.ToString())
 }

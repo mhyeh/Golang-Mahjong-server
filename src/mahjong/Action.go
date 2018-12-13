@@ -81,7 +81,7 @@ func (set ActionSet) ToJSON() string {
 // ChangeTiles emits to client to get the change cards
 func (player *Player) ChangeTiles() []Tile {
 	defaultChange := ArrayToSuitSet(player.defaultChangeCard()).ToStringArray()
-	waitingTime   := 30 * time.Second
+	waitingTime   := 300 * time.Second
 	t := make([]interface{}, 3)
 	for i := 0; i < 3; i++ {
 		t[i] = defaultChange[i]
@@ -106,7 +106,7 @@ func (player *Player) ChangeTiles() []Tile {
 // ChooseLack emits to client to get the choose lack
 func (player *Player) ChooseLack() int {
 	defaultLack := float64(0)
-	waitingTime := 10 * time.Second
+	waitingTime := 1000 * time.Second
 	go player.Socket().Emit("lack", defaultLack, waitingTime / microSec)
 	val        := player.waitForSocket("chooseLack", defaultLack, waitingTime)
 	if (player.checkLack(val)) {
@@ -120,7 +120,7 @@ func (player *Player) ChooseLack() int {
 // Throw emits to client to get the throw Tile
 func (player *Player) Throw() Tile {
 	defaultTile := player.Hand.At(0).ToString()
-	waitingTime := 10 * time.Second
+	waitingTime := 1000 * time.Second
 	go player.Socket().Emit("throw", defaultTile, waitingTime / microSec)
 	val       := player.waitForSocket("throwCard", defaultTile, waitingTime)
 	var throwTile Tile
@@ -167,14 +167,13 @@ func (player *Player) Draw(drawCard Tile) Action {
 // Command emits to client to get command
 func (player *Player) Command(actionSet ActionSet, command int) Action {
 	defaultCommand := NewAction(COMMAND["NONE"], NewTile(-1, 0), 0).ToJSON()
-	waitingTime    := 10 * time.Second
+	waitingTime    := 1000 * time.Second
 	go player.Socket().Emit("command", actionSet.ToJSON(), command, waitingTime / microSec)
 	val := player.waitForSocket("sendCommand", defaultCommand, waitingTime)
 	if player.checkCommand(val) {
 		return JSONToAction(val.(string))
-	} else {
-		return JSONToAction(defaultCommand)
-	}
+	} 
+	return JSONToAction(defaultCommand)
 }
 
 // Fail emits to client to notice the command is failed
@@ -286,10 +285,10 @@ func (player *Player) procDrawCommand(drawCard Tile, act *Action, tai int) {
 	} else {
 		if player.IsHu {
 			act.Tile = drawCard
+			player.Hand.Sub(act.Tile)
 			player.room.BroadcastThrow(player.ID, drawCard)
 		} else {
 			act.Tile = player.Throw()
 		}
-		player.Hand.Sub(act.Tile)
 	}
 }

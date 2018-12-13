@@ -113,7 +113,6 @@ func (room *Room) Run() {
 
 		if onlyThrow {
 			throwCard = curPlayer.Throw()
-			curPlayer.Hand.Sub(throwCard)
 			onlyThrow = false
 		} else {
 			drawCard := room.Deck.Draw()
@@ -123,9 +122,10 @@ func (room *Room) Run() {
 		}
 		room.BroadcastRemainCard(room.Deck.Count())
 
-		fail, huIdx, gonIdx, ponIdx := room.checkAction(currentIdx, act, throwCard)
-		if fail {
+		robGon, huIdx, gonIdx, ponIdx := room.checkAction(currentIdx, act, throwCard)
+		if robGon {
 			curPlayer.Fail(act.Command)
+			room.BroadcastRobGon(curPlayer.ID, act.Tile)
 		} else if act.Command != COMMAND["NONE"] {
 			curPlayer.Success(currentIdx, act.Command, act.Tile, act.Score)
 		}
@@ -133,10 +133,8 @@ func (room *Room) Run() {
 
 		currentIdx, onlyThrow = room.doAction(currentIdx, throwCard, huIdx, gonIdx, ponIdx)
 		if currentIdx == curPlayer.ID {
-			if fail || (act.Command&COMMAND["ONGON"]) == 0 && (act.Command&COMMAND["PONGON"]) == 0 {
-				if throwCard.Suit > 0 {
-					curPlayer.DiscardTiles.Add(throwCard)
-				}
+			if robGon || (act.Command & COMMAND["ONGON"]) == 0 && (act.Command & COMMAND["PONGON"]) == 0 {
+				curPlayer.DiscardTiles.Add(throwCard)
 				currentIdx = (currentIdx + 1) % 4
 			}
 		}

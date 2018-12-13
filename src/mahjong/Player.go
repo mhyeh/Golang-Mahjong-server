@@ -169,7 +169,7 @@ func (player *Player) Gon(tile Tile, Type int, fromID int) int {
 	player.JustGon = true
 	for i := 0; i < IF(Type == COMMAND["PONGON"], 1, 4).(int); i++ {
 		player.Door.Add(tile)
-		if Type == COMMAND["ONGON"] {
+		if Type != COMMAND["ONGON"] {
 			player.VisiableDoor.Add(tile)
 		}
 		player.Hand.Sub(tile)
