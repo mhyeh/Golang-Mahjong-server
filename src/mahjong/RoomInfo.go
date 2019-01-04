@@ -69,7 +69,7 @@ func (room Room) GetDoor(id int) ([][]string, []int, bool) {
 	return visibleList, inVisibleList, false
 }
 
-// GetSea returns each player's discard card
+// GetSea returns each player's discard tile
 func (room Room) GetSea() ([][]string, bool) {
 	if room.State < IdxTurn {
 		return [][]string{}, true
@@ -81,7 +81,7 @@ func (room Room) GetSea() ([][]string, bool) {
 	return discardTileList, false
 }
 
-// GetHu returns each player's hu card
+// GetHu returns each player's hu tile
 func (room Room) GetHu() ([][]string, bool) {
 	if room.State < IdxTurn {
 		return [][]string{}, true

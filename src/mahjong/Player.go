@@ -2,6 +2,7 @@ package mahjong
 
 import (
 	"math"
+	"strings"
 
 	"github.com/googollee/go-socket.io"
 )
@@ -9,6 +10,22 @@ import (
 // NewPlayer creates a new player
 func NewPlayer(room *Room, id int, uuid string) *Player {
 	return &Player {room: room, ID: id, UUID: uuid}
+}
+
+// NewScoreRecord creates a new scoreRecord
+func NewScoreRecord(message string, direct string, player string, tile string, score int) ScoreRecord {
+	if direct != "" {
+		return ScoreRecord {Message: strings.Join([]string{message, direct, player}, " "), Tile: tile, Score: score}
+	}
+	return ScoreRecord {Message: message, Tile: tile, Score: score}
+
+}
+
+// ScoreRecord represents the record of score
+type ScoreRecord struct {
+	Message string
+	Tile    string
+	Score   int
 }
 
 // Player represents a player in mahjong
@@ -19,6 +36,7 @@ type Player struct {
 	DiscardTiles SuitSet
 	HuTiles      SuitSet
 	GonRecord    [4]int
+	ScoreLog     []ScoreRecord
 	Lack         int
 	Credit       int
 	MaxTai       int
@@ -78,21 +96,25 @@ func (player *Player) CheckGon(tile Tile) bool {
 		return true
 	}
 
-	handCount := int(player.Hand[tile.Suit].GetIndex(tile.Value))
-	oldTai    := CalTai(player.Hand.Translate(player.Lack), player.Door.Translate(player.Lack))
-
-	for i := 0; i < handCount; i++ {
+	player.Hand.Add(player.HuTiles[0])
+	oldTai := CalTai(player.Hand.Translate(player.Lack), player.Door.Translate(player.Lack))
+	player.Hand.Sub(player.HuTiles[0])
+	
+	count  := int(player.Hand[tile.Suit].GetIndex(tile.Value))
+	for i := 0; i < count; i++ {
 		player.Hand.Sub(tile)
 		player.Door.Add(tile)
 	}
+	player.Door.Add(tile)
 	newTai := CalTai(player.Hand.Translate(player.Lack), player.Door.Translate(player.Lack))
 	if newTai > 0 {
 		newTai--
 	}
-	for i := 0; i < handCount; i++ {
+	for i := 0; i < count; i++ {
 		player.Hand.Add(tile)
 		player.Door.Sub(tile)
 	}
+	player.Door.Sub(tile)
 	return oldTai == newTai
 }
 
@@ -151,16 +173,23 @@ func (player *Player) Hu(tile Tile, tai int, Type int, addOneTai, addToRoom bool
 	if addToRoom {
 		player.room.HuTiles.Add(tile)
 	}
-	Tai   := IF(addOneTai,      tai + 1, tai).(int)
-	Tai    = IF(player.JustGon, Tai + 1, Tai).(int)
-	score := int(math.Pow(2, float64(Tai - 1)))
+	Tai     := IF(addOneTai,      tai + 1, tai).(int)
+	Tai      = IF(player.JustGon, Tai + 1, Tai).(int)
+	score   := int(math.Pow(2, float64(Tai - 1)))
+	message := IF(Type == COMMAND["HU"], "胡", "自摸").(string)
 	for i := 0; i < 4; i++ {
 		if Type == COMMAND["ZIMO"] && i != player.ID || Type == COMMAND["HU"] && i == fromID {
-			player.Credit += score
-			player.room.Players[i].Credit -= score
+			player.Credit                  += score
+			player.room.Players[i].Credit  -= score
+			player.room.Players[i].ScoreLog = append(player.room.Players[i].ScoreLog, NewScoreRecord(message, "to", player.Name(), tile.ToString(), -score))
 		}
 	}
-	player.MaxTai = IF(player.MaxTai < tai, tai, player.MaxTai).(int)
+	if (message == "胡") {
+		player.ScoreLog = append(player.ScoreLog, NewScoreRecord(message, "from", player.room.Players[fromID].Name(), tile.ToString(), score))
+	} else {
+		player.ScoreLog = append(player.ScoreLog, NewScoreRecord(message, "", "", tile.ToString(), score * 3))
+	}
+	player.MaxTai   = IF(player.MaxTai < tai, tai, player.MaxTai).(int)
 	return score
 }
 
@@ -175,13 +204,29 @@ func (player *Player) Gon(tile Tile, Type int, fromID int) int {
 		player.Hand.Sub(tile)
 	}
 
-	score := IF(Type == COMMAND["PONGON"], 1, 2).(int)
+	score := 2
+	var message string
+	switch Type {
+	case COMMAND["PONGON"]:
+		score   = 1
+		message = "碰槓"
+	case COMMAND["ONGON"]:
+		message = "暗槓"
+	default:
+		message = "槓"
+	}
 	for i := 0; i < 4; i++ {
 		if Type != COMMAND["GON"] && i != player.ID || Type == COMMAND["GON"] && i == fromID {
-			player.Credit                 += score
-			player.GonRecord[i]           += score
-			player.room.Players[i].Credit -= score
+			player.Credit                  += score
+			player.GonRecord[i]            += score
+			player.room.Players[i].Credit  -= score
+			player.room.Players[i].ScoreLog = append(player.room.Players[i].ScoreLog, NewScoreRecord(message, "to", player.Name(), tile.ToString(), -score))
 		}
+	}
+	if Type == COMMAND["GON"] {
+		player.ScoreLog = append(player.ScoreLog, NewScoreRecord(message, "from", player.room.Players[fromID].Name(), tile.ToString(), score))
+	} else {
+		player.ScoreLog = append(player.ScoreLog, NewScoreRecord(message, "", "", tile.ToString(), score * 3))
 	}
 	return score
 }

@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 )
 
-// BroadcastRemainCard broadcasts remain card
-func (room Room) BroadcastRemainCard(num uint) {
-	room.IO.BroadcastTo(room.Name, "remainCard", num)
+// BroadcastRemainTile broadcasts remain tile
+func (room Room) BroadcastRemainTile(num uint) {
+	room.IO.BroadcastTo(room.Name, "remainTile", num)
 }
 
 // BroadcastStopWaiting broadcasts stop waiting signal
@@ -24,7 +24,7 @@ func (room Room) BroadcastGameStart() {
 	room.IO.BroadcastTo(room.Name, "broadcastGameStart", room.GetPlayerList())
 }
 
-// BroadcastChange broadcasts the player's id who already change cards
+// BroadcastChange broadcasts the player's id who already change tiles
 func (room Room) BroadcastChange(id int) {
 	room.IO.BroadcastTo(room.Name, "broadcastChange", id)
 }
@@ -34,12 +34,12 @@ func (room Room) BroadcastLack() {
 	room.IO.BroadcastTo(room.Name, "afterLack", room.ChoosedLack)
 }
 
-// BroadcastDraw broadcasts the player's id who draw a card
+// BroadcastDraw broadcasts the player's id who draw a tile
 func (room Room) BroadcastDraw(id int) {
 	room.IO.BroadcastTo(room.Name, "broadcastDraw", id, room.Players[id].Hand.ToStringArray())
 }
 
-// BroadcastThrow broadcasts the player's id and the card he threw
+// BroadcastThrow broadcasts the player's id and the tile he threw
 func (room Room) BroadcastThrow(id int, tile Tile) {
 	room.IO.BroadcastTo(room.Name, "broadcastThrow", id, tile.ToString())
 }

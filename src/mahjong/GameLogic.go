@@ -10,24 +10,25 @@ import (
 // Game State
 const (
 	BeforeStart = iota
-	DealCard
-	ChangeCard
+	DealTile
+	ChangeTile
 	ChooseLack
 	IdxTurn
 )
 
 // GameResult represents the result of mahjong
 type GameResult struct {
-	Hand  []string
-	Door  []string
-	Score int
+	Hand     []string
+	Door     []string
+	Score    int
+	ScoreLog []ScoreRecord
 }
 
 func (room *Room) preproc() {
 	time.Sleep(2 * time.Second)
 	room.init()
 	time.Sleep(3 * time.Second)
-	room.changeCard()
+	room.changeTile()
 	time.Sleep(5 * time.Second)
 	room.chooseLack()
 	time.Sleep(3 * time.Second)
@@ -43,12 +44,12 @@ func (room *Room) init() {
 			result := room.Deck.Draw()
 			player.Hand.Add(result)
 		}
-		player.Socket().Emit("dealCard", player.Hand.ToStringArray())
+		player.Socket().Emit("dealTile", player.Hand.ToStringArray())
 	}
-	room.State = DealCard
+	room.State = DealTile
 }
 
-func (room *Room) changeCard() {
+func (room *Room) changeTile() {
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(4)
 	for i := 0; i < 4; i++ {
@@ -71,7 +72,7 @@ func (room *Room) changeCard() {
 		t := ArrayToSuitSet(tmp[i])
 		room.Players[i].Socket().Emit("afterChange", t.ToStringArray(), rand)
 	}
-	room.State = ChangeCard
+	room.State = ChangeTile
 }
 
 func (room *Room) chooseLack() {
@@ -88,29 +89,29 @@ func (room *Room) chooseLack() {
 	room.State = ChooseLack
 }
 
-func (room *Room) checkAction(currentIdx int, playerAct Action, throwCard Tile) (bool, int, int, int) {
+func (room *Room) checkAction(currentIdx int, playerAct Action, throwTile Tile) (bool, int, int, int) {
 	ponIdx, gonIdx, huIdx := -1, -1, -1
 	fail                  := false
 
 	if (playerAct.Command & COMMAND["PONGON"]) != 0 {
 		fail = room.checkRobGon(currentIdx, playerAct.Tile, &huIdx)
 	} else if (playerAct.Command & COMMAND["ZIMO"]) == 0 && (playerAct.Command & COMMAND["ONGON"]) == 0 {
-		room.checkOthers(currentIdx, throwCard, &huIdx, &gonIdx, &ponIdx)
+		room.checkOthers(currentIdx, throwTile, &huIdx, &gonIdx, &ponIdx)
 	}
 
 	return fail, huIdx, gonIdx, ponIdx
 }
 
-func (room *Room) checkRobGon(currentIdx int, gonCard Tile, huIdx *int) bool {
+func (room *Room) checkRobGon(currentIdx int, gonTile Tile, huIdx *int) bool {
 	var waitGroup  sync.WaitGroup
 	var playersAct [3]Action
 	waitGroup.Add(3)
 	for i := 1; i < 4; i++ {
 		id  := (i + currentIdx) % 4
 		tai := 0
-		if room.Players[id].CheckHu(gonCard, &tai) {
+		if room.Players[id].CheckHu(gonTile, &tai) {
 			actionSet := NewActionSet()
-			actionSet[COMMAND["HU"]] = append(actionSet[COMMAND["HU"]], gonCard)
+			actionSet[COMMAND["HU"]] = append(actionSet[COMMAND["HU"]], gonTile)
 			go func(i int) {
 				playersAct[i - 1] = room.Players[i].Command(actionSet, COMMAND["HU"])
 				waitGroup.Done()
@@ -120,7 +121,7 @@ func (room *Room) checkRobGon(currentIdx int, gonCard Tile, huIdx *int) bool {
 		}
 	}
 	waitGroup.Wait()
-	return room.robGon(currentIdx, playersAct, gonCard, huIdx)
+	return room.robGon(currentIdx, playersAct, gonTile, huIdx)
 }
 
 func (room *Room) robGon(currentIdx int, playersAct [3]Action, huTile Tile, huIdx *int) bool {
@@ -237,7 +238,7 @@ func (room *Room) end() {
 
 	var data []GameResult
 	for _, player := range room.Players {
-		data = append(data, GameResult {player.Hand.ToStringArray(), player.Door.ToStringArray(), player.Credit})
+		data = append(data, GameResult {player.Hand.ToStringArray(), player.Door.ToStringArray(), player.Credit, player.ScoreLog})
 	}
 	room.BroadcastEnd(data)
 	players := FindPlayerListInRoom(room.Name)
@@ -266,6 +267,8 @@ func (room *Room) lackPenalty() {
 				if room.Players[j].Hand[room.Players[j].Lack].Count() == 0 && i != j {
 					room.Players[i].Credit -= score
 					room.Players[j].Credit += score
+					room.Players[i].ScoreLog = append(room.Players[i].ScoreLog, NewScoreRecord("花豬", "to", room.Players[j].Name(), "", -score))
+					room.Players[j].ScoreLog = append(room.Players[j].ScoreLog, NewScoreRecord("花豬", "from", room.Players[i].Name(), "", score))
 				}
 			}
 		}
@@ -280,6 +283,8 @@ func (room *Room) noTingPenalty() {
 					score := int(math.Pow(2, float64(room.Players[j].MaxTai - 1)))
 					room.Players[i].Credit -= score
 					room.Players[j].Credit += score
+					room.Players[i].ScoreLog = append(room.Players[i].ScoreLog, NewScoreRecord("大叫", "to", room.Players[j].Name(), "", -score))
+					room.Players[j].ScoreLog = append(room.Players[j].ScoreLog, NewScoreRecord("大叫", "from", room.Players[i].Name(), "", score))
 				}
 			}
 		}
@@ -290,10 +295,12 @@ func (room *Room) returnMoney() {
 	for i := 0; i < 4; i++ {
 		if !room.Players[i].IsTing && !room.Players[i].IsHu {
 			for j := 0; j < 4; j++ {
-				if i != j {
-					score := room.Players[i].GonRecord[j]
+				score := room.Players[i].GonRecord[j]
+				if score != 0 {
 					room.Players[i].Credit -= score
 					room.Players[j].Credit += score
+					room.Players[i].ScoreLog = append(room.Players[i].ScoreLog, NewScoreRecord("退稅", "to", room.Players[j].Name(), "", -score))
+					room.Players[j].ScoreLog = append(room.Players[j].ScoreLog, NewScoreRecord("退稅", "from", room.Players[i].Name(), "", score))
 				}
 			}
 		}

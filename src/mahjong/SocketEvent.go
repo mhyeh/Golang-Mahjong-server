@@ -97,7 +97,7 @@ func getReadyPlayer(room string) []string {
 }
 
 func getHand(uuid string, room string) []string {
-	if !Auth(room, uuid) || game.Rooms[room].State < DealCard {
+	if !Auth(room, uuid) || game.Rooms[room].State < DealTile {
 		return []string{}
 	}
 	index := FindPlayerByUUID(uuid)

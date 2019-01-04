@@ -107,22 +107,22 @@ func (room *Room) Run() {
 	gameOver   := false
 	for !gameOver {
 		curPlayer := room.Players[currentIdx]
-		throwCard := NewTile(-1, 0)
-		act       := NewAction(COMMAND["NONE"], throwCard, 0)
+		throwTile := NewTile(-1, 0)
+		act       := NewAction(COMMAND["NONE"], throwTile, 0)
 		room.State = IdxTurn + currentIdx
 
 		if onlyThrow {
-			throwCard = curPlayer.Throw()
+			throwTile = curPlayer.Throw(throwTile)
 			onlyThrow = false
 		} else {
-			drawCard := room.Deck.Draw()
+			drawTile := room.Deck.Draw()
 			room.BroadcastDraw(currentIdx)
-			act       = curPlayer.Draw(drawCard)
-			throwCard = act.Tile
+			act       = curPlayer.Draw(drawTile)
+			throwTile = act.Tile
 		}
-		room.BroadcastRemainCard(room.Deck.Count())
+		room.BroadcastRemainTile(room.Deck.Count())
 
-		robGon, huIdx, gonIdx, ponIdx := room.checkAction(currentIdx, act, throwCard)
+		robGon, huIdx, gonIdx, ponIdx := room.checkAction(currentIdx, act, throwTile)
 		if robGon {
 			curPlayer.Fail(act.Command)
 			room.BroadcastRobGon(curPlayer.ID, act.Tile)
@@ -131,12 +131,10 @@ func (room *Room) Run() {
 		}
 		curPlayer.JustGon = false
 
-		currentIdx, onlyThrow = room.doAction(currentIdx, throwCard, huIdx, gonIdx, ponIdx)
-		if currentIdx == curPlayer.ID {
-			if robGon || (act.Command & COMMAND["ONGON"]) == 0 && (act.Command & COMMAND["PONGON"]) == 0 {
-				curPlayer.DiscardTiles.Add(throwCard)
-				currentIdx = (currentIdx + 1) % 4
-			}
+		currentIdx, onlyThrow = room.doAction(currentIdx, throwTile, huIdx, gonIdx, ponIdx)
+		if currentIdx == curPlayer.ID && huIdx == -1 && (act.Command & COMMAND["ONGON"]) == 0 && (act.Command & COMMAND["PONGON"]) == 0 {
+			curPlayer.DiscardTiles.Add(throwTile)
+			currentIdx = (currentIdx + 1) % 4
 		}
 		if room.Deck.IsEmpty() {
 			gameOver = true
