@@ -63,7 +63,7 @@ func SocketConnect(so socketio.Socket) {
 	})
 }
 
-func socketReady(room string, uuid string) int {
+func socketReady(uuid string, room string) int {
 	if !Auth(room, uuid) {
 		return -1
 	}

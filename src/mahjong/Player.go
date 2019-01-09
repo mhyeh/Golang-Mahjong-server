@@ -189,7 +189,7 @@ func (player *Player) Hu(tile Tile, tai int, Type int, addOneTai, addToRoom bool
 	} else {
 		player.ScoreLog = append(player.ScoreLog, NewScoreRecord(message, "", "", tile.ToString(), score * 3))
 	}
-	player.MaxTai   = IF(player.MaxTai < tai, tai, player.MaxTai).(int)
+	player.MaxTai = IF(player.MaxTai < tai, tai, player.MaxTai).(int)
 	return score
 }
 

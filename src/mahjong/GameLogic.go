@@ -24,6 +24,49 @@ type GameResult struct {
 	ScoreLog []ScoreRecord
 }
 
+// Run runs mahjong logic
+func (room *Room) Run() {
+	room.preproc()
+	currentIdx := 0
+	onlyThrow  := false
+	gameOver   := false
+	for !gameOver {
+		curPlayer := room.Players[currentIdx]
+		throwTile := NewTile(-1, 0)
+		act       := NewAction(COMMAND["NONE"], throwTile, 0)
+		room.State = IdxTurn + currentIdx
+
+		if onlyThrow {
+			throwTile = curPlayer.Throw(throwTile)
+			onlyThrow = false
+		} else {
+			drawTile := room.Deck.Draw()
+			room.BroadcastDraw(currentIdx, room.Deck.Count())
+			act       = curPlayer.Draw(drawTile)
+			throwTile = act.Tile
+		}
+
+		robGon, huIdx, gonIdx, ponIdx := room.checkAction(currentIdx, act, throwTile)
+		if robGon {
+			curPlayer.Fail(act.Command)
+			room.BroadcastRobGon(curPlayer.ID, act.Tile)
+		} else if act.Command != COMMAND["NONE"] {
+			curPlayer.Success(currentIdx, act.Command, act.Tile, act.Score)
+		}
+		curPlayer.JustGon = false
+
+		currentIdx, onlyThrow = room.doAction(currentIdx, throwTile, huIdx, gonIdx, ponIdx)
+		if currentIdx == curPlayer.ID && huIdx == -1 && (act.Command & COMMAND["ONGON"]) == 0 && (act.Command & COMMAND["PONGON"]) == 0 {
+			curPlayer.DiscardTiles.Add(throwTile)
+			currentIdx = (currentIdx + 1) % 4
+		}
+		if room.Deck.IsEmpty() {
+			gameOver = true
+		}
+	}
+	room.end()
+}
+
 func (room *Room) preproc() {
 	time.Sleep(2 * time.Second)
 	room.init()

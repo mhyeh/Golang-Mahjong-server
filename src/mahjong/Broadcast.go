@@ -31,12 +31,12 @@ func (room Room) BroadcastChange(id int) {
 
 // BroadcastLack broadcasts the player's id who already choose lack
 func (room Room) BroadcastLack() {
-	room.IO.BroadcastTo(room.Name, "afterLack", room.ChoosedLack)
+	room.IO.BroadcastTo(room.Name, "broadcastLack", room.ChoosedLack)
 }
 
 // BroadcastDraw broadcasts the player's id who draw a tile
-func (room Room) BroadcastDraw(id int) {
-	room.IO.BroadcastTo(room.Name, "broadcastDraw", id, room.Players[id].Hand.ToStringArray())
+func (room Room) BroadcastDraw(id int, num uint) {
+	room.IO.BroadcastTo(room.Name, "broadcastDraw", id, num)
 }
 
 // BroadcastThrow broadcasts the player's id and the tile he threw

@@ -25,13 +25,6 @@ A Mahjong server written with Golang
 
 ## TODO
 
-- ~~Disconnect handle~~
-- ~~Check Hu logic~~
-- ~~Check PonGon and OnGon broadcast function~~
-- ~~Check data send from socket~~
-- ~~Error Handling~~
-- Optimize
-- Refactor
 - Account System
 - Game log storing
 - AI
