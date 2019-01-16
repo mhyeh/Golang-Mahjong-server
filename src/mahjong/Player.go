@@ -43,6 +43,7 @@ type Player struct {
 	IsHu         bool
 	IsTing       bool
 	JustGon      bool
+	IsPenalize   bool
 	ID           int
 	UUID         string
 	room         *Room
@@ -79,12 +80,13 @@ func (player *Player) Init() {
 		player.DiscardTiles[i] = 0
 	}
 
-	player.Credit  = 0
-	player.MaxTai  = 0
-	player.IsHu    = false
-	player.IsTing  = false
-	player.JustGon = false
-	player.Lack    = -1
+	player.Credit     = 0
+	player.MaxTai     = 0
+	player.IsHu       = false
+	player.IsTing     = false
+	player.JustGon    = false
+	player.IsPenalize = false
+	player.Lack       = -1
 }
 
 // CheckGon checks if the player can gon
@@ -175,6 +177,7 @@ func (player *Player) Hu(tile Tile, tai int, Type int, addOneTai, addToRoom bool
 	}
 	Tai     := IF(addOneTai,      tai + 1, tai).(int)
 	Tai      = IF(player.JustGon, Tai + 1, Tai).(int)
+	Tai      = IF(Type == COMMAND["ZIMO"] && player.room.GetRemainCount() > 51, 6, Tai).(int)
 	score   := int(math.Pow(2, float64(Tai - 1)))
 	message := IF(Type == COMMAND["HU"], "胡", "自摸").(string)
 	for i := 0; i < 4; i++ {

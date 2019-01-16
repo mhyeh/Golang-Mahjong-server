@@ -59,7 +59,7 @@ func (room *Room) RemovePlayer(id int) {
 func (room *Room) WaitToStart() {
 	room.Waiting = true
 	for room.NumPlayer() < 4 && room.Waiting {
-		time.Sleep(0)
+		time.Sleep(2 * time.Second)
 	}
 
 	if !room.Waiting {

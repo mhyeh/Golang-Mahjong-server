@@ -308,10 +308,11 @@ func (room *Room) lackPenalty() {
 		if room.Players[i].Hand.IsContainColor(room.Players[i].Lack) {
 			for j := 0; j < 4; j++ {
 				if room.Players[j].Hand[room.Players[j].Lack].Count() == 0 && i != j {
-					room.Players[i].Credit -= score
-					room.Players[j].Credit += score
-					room.Players[i].ScoreLog = append(room.Players[i].ScoreLog, NewScoreRecord("花豬", "to", room.Players[j].Name(), "", -score))
-					room.Players[j].ScoreLog = append(room.Players[j].ScoreLog, NewScoreRecord("花豬", "from", room.Players[i].Name(), "", score))
+					room.Players[i].IsPenalize = true
+					room.Players[i].Credit    -= score
+					room.Players[j].Credit    += score
+					room.Players[i].ScoreLog   = append(room.Players[i].ScoreLog, NewScoreRecord("花豬", "to", room.Players[j].Name(), "", -score))
+					room.Players[j].ScoreLog   = append(room.Players[j].ScoreLog, NewScoreRecord("花豬", "from", room.Players[i].Name(), "", score))
 				}
 			}
 		}
@@ -320,7 +321,7 @@ func (room *Room) lackPenalty() {
 
 func (room *Room) noTingPenalty() {
 	for i := 0; i < 4; i++ {
-		if !room.Players[i].IsTing && !room.Players[i].IsHu {
+		if !room.Players[i].IsTing && !room.Players[i].IsHu && !room.Players[i].IsPenalize {
 			for j := 0; j < 4; j++ {
 				if room.Players[j].IsTing && i != j {
 					score := int(math.Pow(2, float64(room.Players[j].MaxTai - 1)))
