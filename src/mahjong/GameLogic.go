@@ -158,7 +158,7 @@ func (room *Room) checkRobGon(currentIdx int, gonTile Tile, huIdx *int) bool {
 			go func(i int) {
 				playersAct[i - 1] = room.Players[i].Command(actionSet, COMMAND["HU"])
 				waitGroup.Done()
-			}(i)
+			}(id)
 		} else {
 			waitGroup.Done()
 		}
