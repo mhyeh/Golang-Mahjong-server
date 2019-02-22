@@ -8,20 +8,26 @@ import (
 
 // NewRoom creates a new room
 func NewRoom(name string) *Room {
-	return &Room {Name: name, Waiting: false, State: BeforeStart}
+	return &Room { Name: name, Waiting: false, State: BeforeStart }
 }
 
 // Room represents a round of mahjong
 type Room struct {
 	Players      []*Player
-	ChangedTiles [4][]Tile
-	ChoosedLack  [4]int
 	Deck         SuitSet
-	HuTiles      SuitSet
 	Waiting      bool
 	IO           *socketio.Server
 	Name         string
 	State        int
+	Info         HuInfo
+	KeepWin      bool
+	NumKeepWin   int
+	Banker       int
+	SevenFlower  bool
+	SevenID      int
+	Wind         int
+	Round        int
+	OpenIdx      int
 }
 
 // NumPlayer returns the number of player in the room

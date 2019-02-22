@@ -9,6 +9,11 @@ func (room Room) GetPlayerList() []string {
 	return nameList
 }
 
+// GetWindAndRound returns the wind and round
+func (room Room) GetWindAndRound() (int, int) {
+	return room.Wind, room.Round
+}
+
 // GetReadyPlayers returns the name list of ready player
 func (room Room) GetReadyPlayers() []string {
 	var nameList []string
@@ -16,18 +21,6 @@ func (room Room) GetReadyPlayers() []string {
 		nameList = append(nameList, player.Name())
 	}
 	return nameList
-}
-
-// GetLack returns each player's lack
-func (room Room) GetLack() []int {
-	if room.State < ChooseLack {
-		return []int{}
-	}
-	var lacks []int
-	for _, player := range room.Players {
-		lacks = append(lacks, player.Lack)
-	}
-	return lacks
 }
 
 // GetHandCount returns each player's amount of hand
@@ -51,19 +44,19 @@ func (room Room) GetRemainCount() int {
 }
 
 // GetDoor returns each player's door
-func (room Room) GetDoor(id int) ([][]string, []int, bool) {
+func (room Room) GetDoor(id int) ([][][]string, []int, bool) {
 	if room.State < IdxTurn {
-		return [][]string{}, []int{}, true
+		return [][][]string{}, []int{}, true
 	}
 	var inVisibleList []int
-	var visibleList   [][]string
+	var visibleList   [][][]string
 	for _, player := range room.Players {
 		if id == player.ID {
-			visibleList   = append(visibleList, player.Door.ToStringArray())
+			visibleList   = append(visibleList, [][]string{ player.EatTiles.ToStringArray(), player.PonTiles.ToStringArray(), player.GonTiles.ToStringArray(), player.OngonTiles.ToStringArray() })
 			inVisibleList = append(inVisibleList, 0)
 		} else {
-			visibleList   = append(visibleList, player.VisiableDoor.ToStringArray())
-			inVisibleList = append(inVisibleList, int(player.Door.Count() - player.VisiableDoor.Count()))
+			visibleList   = append(visibleList, [][]string{ player.EatTiles.ToStringArray(), player.PonTiles.ToStringArray(), player.GonTiles.ToStringArray(), []string{} })
+			inVisibleList = append(inVisibleList, int(player.OngonTiles.Count()))
 		}
 	}
 	return visibleList, inVisibleList, false
@@ -81,16 +74,13 @@ func (room Room) GetSea() ([][]string, bool) {
 	return discardTileList, false
 }
 
-// GetHu returns each player's hu tile
-func (room Room) GetHu() ([][]string, bool) {
-	if room.State < IdxTurn {
-		return [][]string{}, true
-	}
-	var huList [][]string
+// GetFlower returns each player's flower tile
+func (room Room) GetFlower() ([][]string, bool) {
+	var flowerList [][]string
 	for _, player := range room.Players {
-		huList = append(huList, player.HuTiles.ToStringArray())
+		flowerList = append(flowerList, player.Flowers.ToStringArray())
 	}
-	return huList, false
+	return flowerList, false
 }
 
 // GetCurrentIdx returns current index

@@ -6,7 +6,7 @@ import (
 
 // NewTile creates a new tile
 func NewTile(suit int, value uint) Tile {
-	return Tile {Suit: suit, Value: value}
+	return Tile { Suit: suit, Value: value }
 }
 
 // Tile represents a mahjong tile
@@ -15,16 +15,18 @@ type Tile struct {
 	Value uint
 }
 
-var suitStr = []string{"c", "d", "b"}
-var suitMap = map[string]int {
+var suitStr = []string{ "c", "d", "b", "o", "f" }
+var suitMap = map[string]int{
 	"c": 0,
 	"d": 1,
 	"b": 2,
+	"o": 3, // 中發白、風
+	"f": 4, // 花
 }
 
 // ToString converts tile to string
 func (tile Tile) ToString() string {
-	if tile.Suit < 0 || tile.Suit >= 3 {
+	if tile.Suit < 0 || tile.Suit >= 6 {
 		return ""
 	}
 	return suitStr[tile.Suit] + strconv.Itoa(int(tile.Value + 1))
@@ -76,5 +78,8 @@ func IsValidTile(tile string) bool {
 			break
 		}
 	}
-	return flag && v > 0 && v <= 9
+	if flag {
+		return v > 0 && v <= int(SuitTileCount[suitMap[s]])
+	}
+	return false
 }

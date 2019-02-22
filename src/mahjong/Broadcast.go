@@ -24,14 +24,24 @@ func (room Room) BroadcastGameStart() {
 	room.IO.BroadcastTo(room.Name, "broadcastGameStart", room.GetPlayerList())
 }
 
-// BroadcastChange broadcasts the player's id who already change tiles
-func (room Room) BroadcastChange(id int) {
-	room.IO.BroadcastTo(room.Name, "broadcastChange", id)
+// BroadcastWindAndRound broadcasts wind and round index
+func (room Room) BroadcastWindAndRound(wind int, round int) {
+	room.IO.BroadcastTo(room.Name, "broadcastWindAndRound", wind, round)
 }
 
-// BroadcastLack broadcasts the player's id who already choose lack
-func (room Room) BroadcastLack() {
-	room.IO.BroadcastTo(room.Name, "broadcastLack", room.ChoosedLack)
+// BroadcastOpenDoor broadcasts poen door index
+func (room Room) BroadcastOpenDoor(idx int) {
+	room.IO.BroadcastTo(room.Name, "broadcastOpenDoor", idx)
+}
+
+// BroadcastBuHua broadcasts the player's flower
+func (room Room) BroadcastBuHua(flowers [][]string) {
+	room.IO.BroadcastTo(room.Name, "broadcastBuHua", flowers)
+}
+
+// BroadcastHua broadcasts the player's draw flower
+func (room Room) BroadcastHua(id int, tile Tile) {
+	room.IO.BroadcastTo(room.Name, "broadcastHua", id, tile.ToString())
 }
 
 // BroadcastDraw broadcasts the player's id who draw a tile
@@ -45,11 +55,11 @@ func (room Room) BroadcastThrow(id int, tile Tile) {
 }
 
 // BroadcastCommand broadcasts the player's id and the command he made
-func (room Room) BroadcastCommand(from int, to int, command int, tile Tile, score int) {
+func (room Room) BroadcastCommand(from int, to int, command int, tile string, score int) {
 	if command == COMMAND["ONGON"] {
 		room.IO.BroadcastTo(room.Name, "broadcastCommand", from, to, command, "", score)
 	} else {
-		room.IO.BroadcastTo(room.Name, "broadcastCommand", from, to, command, tile.ToString(), score)
+		room.IO.BroadcastTo(room.Name, "broadcastCommand", from, to, command, tile, score)
 	}
 }
 

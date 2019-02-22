@@ -35,27 +35,28 @@ func SocketConnect(so socketio.Socket) {
 		}
 
 		player := PlayerList[index]
-		if (player.State & (MATCHED | READY | PLAYING)) != 0 && !(room == "") && player.Room == room {
+		if (player.State & (MATCHED | READY | PLAYING)) != 0 && room != "" && player.Room == room {
 			so.Join(room)
 		}
 		player.Socket = &so
 		return player.State
 	})
 
-	so.On("ready",          socketReady)
-	so.On("getRoomInfo",    getRoomInfo)
-	so.On("getID",          getID)
-	so.On("getReadyPlayer", getReadyPlayer)
-	so.On("getHand",        getHand)
-	so.On("getPlayerList",  getPlayerList)
-	so.On("getLack",        getLack)
-	so.On("getHandCount",   getHandCount)
-	so.On("getRemainCount", getRemainCount)
-	so.On("getDoor",        getDoor)
-	so.On("getSea",         getSea)
-	so.On("getHu",          getHu)
-	so.On("getCurrentIdx",  getCurrentIdx)
-	so.On("getScore",       getScore)
+	so.On("ready",           socketReady)
+	so.On("getRoomInfo",     getRoomInfo)
+	so.On("getID",           getID)
+	so.On("getReadyPlayer",  getReadyPlayer)
+	so.On("getWindAndRound", getWindAndRound)
+	so.On("getHand",         getHand)
+	so.On("getPlayerList",   getPlayerList)
+	so.On("getHandCount",    getHandCount)
+	so.On("getRemainCount",  getRemainCount)
+	so.On("getDoor",         getDoor)
+	so.On("getSea",          getSea)
+	so.On("getFlower",       getFlower)
+	so.On("getCurrentIdx",   getCurrentIdx)
+	so.On("getScore",        getScore)
+	so.On("getOpenIdx",      getOpenIdx)
 
 	so.On("disconnection", func() {
 		log.Println("on disconnect")
@@ -96,6 +97,13 @@ func getReadyPlayer(room string) []string {
 	return game.Rooms[room].GetReadyPlayers()
 }
 
+func getWindAndRound(room string) (int, int) {
+	if game.Rooms[room] == nil {
+		return -1, -1
+	}
+	return game.Rooms[room].GetWindAndRound()
+}
+
 func getHand(uuid string, room string) []string {
 	if !Auth(room, uuid) || game.Rooms[room].State < DealTile {
 		return []string{}
@@ -123,13 +131,6 @@ func getPlayerList(room string) []string {
 	return game.Rooms[room].GetPlayerList()
 }
 
-func getLack(room string) []int {
-	if game.Rooms[room] == nil {
-		return []int{}
-	}
-	return game.Rooms[room].GetLack()
-}
-
 func getHandCount(room string) []int {
 	if game.Rooms[room] == nil {
 		return []int{}
@@ -144,9 +145,9 @@ func getRemainCount(room string) int {
 	return game.Rooms[room].GetRemainCount()
 }
 
-func getDoor(uuid string, room string) ([][]string, []int, bool) {
+func getDoor(uuid string, room string) ([][][]string, []int, bool) {
 	if !Auth(room, uuid) {
-		return [][]string{}, []int{}, true
+		return [][][]string{}, []int{}, true
 	}
 	index := FindPlayerByUUID(uuid)
 	id    := PlayerList[index].Index
@@ -160,11 +161,11 @@ func getSea(room string) ([][]string, bool) {
 	return game.Rooms[room].GetSea()
 }
 
-func getHu(room string) ([][]string, bool) {
+func getFlower(room string) ([][]string, bool) {
 	if game.Rooms[room] == nil {
 		return [][]string{}, true
 	}
-	return game.Rooms[room].GetHu()
+	return game.Rooms[room].GetFlower()
 }
 
 func getCurrentIdx(room string) int {
@@ -179,4 +180,11 @@ func getScore(room string) []int {
 		return []int{}
 	}
 	return game.Rooms[room].GetScore()
+}
+
+func getOpenIdx(room string) int {
+	if game.Rooms[room] == nil {
+		return -1
+	}
+	return game.Rooms[room].OpenIdx
 }

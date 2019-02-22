@@ -1,7 +1,6 @@
 package mahjong
 
 import (
-	"math"
 	"strings"
 
 	"github.com/googollee/go-socket.io"
@@ -9,15 +8,15 @@ import (
 
 // NewPlayer creates a new player
 func NewPlayer(room *Room, id int, uuid string) *Player {
-	return &Player {room: room, ID: id, UUID: uuid}
+	return &Player{ room: room, ID: id, UUID: uuid }
 }
 
 // NewScoreRecord creates a new scoreRecord
 func NewScoreRecord(message string, direct string, player string, tile string, score int) ScoreRecord {
 	if direct != "" {
-		return ScoreRecord {Message: strings.Join([]string{message, direct, player}, " "), Tile: tile, Score: score}
+		return ScoreRecord{ Message: strings.Join([]string{ message, direct, player }, " "), Tile: tile, Score: score }
 	}
-	return ScoreRecord {Message: message, Tile: tile, Score: score}
+	return ScoreRecord{ Message: message, Tile: tile, Score: score }
 
 }
 
@@ -31,19 +30,16 @@ type ScoreRecord struct {
 // Player represents a player in mahjong
 type Player struct {
 	Hand         SuitSet
-	Door         SuitSet
-	VisiableDoor SuitSet
+	EatTiles     SuitSet
+	PonTiles     SuitSet
+	GonTiles     SuitSet
+	OngonTiles   SuitSet
+	Flowers      SuitSet
 	DiscardTiles SuitSet
-	HuTiles      SuitSet
-	GonRecord    [4]int
 	ScoreLog     []ScoreRecord
-	Lack         int
 	Credit       int
-	MaxTai       int
-	IsHu         bool
-	IsTing       bool
 	JustGon      bool
-	IsPenalize   bool
+	FirstDraw    bool
 	ID           int
 	UUID         string
 	room         *Room
@@ -71,128 +67,150 @@ func (player Player) Socket() socketio.Socket {
 func (player *Player) Init() {
 	index := FindPlayerByUUID(player.UUID)
 	PlayerList[index].State = PLAYING
-	for i := 0; i < 3; i++ {
-		player.Door[i]         = 0
-		player.VisiableDoor[i] = 0
+	for i := 0; i < 5; i++ {
 		player.Hand[i]         = 0
-		player.HuTiles[i]      = 0
-		player.GonRecord[i]    = 0
 		player.DiscardTiles[i] = 0
+		player.Flowers[i]      = 0
+		player.EatTiles[i]     = 0
+		player.PonTiles[i]     = 0
+		player.GonTiles[i]     = 0
+		player.OngonTiles[i]   = 0
 	}
 
-	player.Credit     = 0
-	player.MaxTai     = 0
-	player.IsHu       = false
-	player.IsTing     = false
-	player.JustGon    = false
-	player.IsPenalize = false
-	player.Lack       = -1
+	player.Credit  = 0
+	player.JustGon = false
 }
 
-// CheckGon checks if the player can gon
-func (player *Player) CheckGon(tile Tile) bool {
-	if tile.Suit == player.Lack {
-		return false
-	}
-	if !player.IsHu {
-		return true
-	}
-
-	player.Hand.Add(player.HuTiles[0])
-	oldTai := CalTai(player.Hand.Translate(player.Lack), player.Door.Translate(player.Lack))
-	player.Hand.Sub(player.HuTiles[0])
-	
-	count  := int(player.Hand[tile.Suit].GetIndex(tile.Value))
-	for i := 0; i < count; i++ {
-		player.Hand.Sub(tile)
-		player.Door.Add(tile)
-	}
-	player.Door.Add(tile)
-	newTai := CalTai(player.Hand.Translate(player.Lack), player.Door.Translate(player.Lack))
-	if newTai > 0 {
-		newTai--
-	}
-	for i := 0; i < count; i++ {
-		player.Hand.Add(tile)
-		player.Door.Sub(tile)
-	}
-	player.Door.Sub(tile)
-	return oldTai == newTai
-}
 
 // CheckPon checks if the player can pon
 func (player *Player) CheckPon(tile Tile) bool {
-	if tile.Suit == player.Lack || player.IsHu {
+	if tile.Suit < 0 || tile.Suit > 3 {
 		return false
 	}
 	return player.Hand[tile.Suit].GetIndex(tile.Value) >= 2
 }
 
-// CheckHu checks if the player can hu
-func (player *Player) CheckHu(tile Tile, tai *int) bool {
-	*tai = 0
-	if player.Hand[player.Lack].Count() > 0 {
+// CheckEat checks if the player can eat
+func (player *Player) CheckEat(tile Tile) bool {
+	if tile.Suit < 0 || tile.Suit > 2 {
 		return false
 	}
-	if tile.Suit == -1 {
-		*tai = CalTai(player.Hand.Translate(player.Lack), player.Door.Translate(player.Lack))
-	} else {
-		if tile.Suit == player.Lack {
-			return false
-		}
-		player.Hand.Add(tile)
-		*tai = CalTai(player.Hand.Translate(player.Lack), player.Door.Translate(player.Lack))
-		player.Hand.Sub(tile)
-	}
-	return *tai > 0
-}
-
-// CheckTing checks if the player is ting
-func (player *Player) CheckTing(max *int) bool {
-	*max = 0
-	tHand := player.Hand.Translate(player.Lack)
-	tDoor := player.Door.Translate(player.Lack)
-	total := tHand + tDoor
-	for i := uint(0); i < 18; i++ {
-		if ((total >> (i * 3)) & 7) < 4 {
-			newHand := tHand + (1 << (i * 3))
-			tai     := CalTai(newHand, tDoor)
-			if tai > *max {
-				*max = tai
+	player.Hand.Add(tile)
+	flag := false
+	for i := int(tile.Value) - 2; i <= int(tile.Value); i++ {
+		flag = true
+		for j := 0; j < 3; j++ {
+			if !(i + j > 0) || !(i + j <= 9) || !player.Hand.Have(NewTile(tile.Suit, uint(i + j))) {
+				flag = false
+				i   += j
+				break
 			}
 		}
+		if flag {
+			break
+		}
 	}
-	return *max > 0
+	player.Hand.Sub(tile)
+	return flag
+}
+
+// CheckHu checks if the player can hu
+func (player *Player) CheckHu(tile Tile, isZimo uint, tai *TaiData) bool {
+	*tai  = TaiData{ -1, "" }
+	info := player.room.Info
+	for i := 0; i < 5; i++ {
+		info.Door[i] = 0
+	}
+	info.CertainTile = tile
+
+	info.Hand = player.Hand
+
+	eatCount := int(player.EatTiles.Count())
+	for i := 0; i < eatCount; i++ {
+		firstTile := player.EatTiles.At(i)
+		for j := uint(0); j < 3; j++ {
+			info.Door.Add(NewTile(firstTile.Suit, firstTile.Value + j))
+		}
+	}
+
+	ponCount := int(player.PonTiles.Count())
+	for i := 0; i < ponCount; i++ {
+		tile := player.PonTiles.At(i)
+		for j := uint(0); j < 3; j++ {
+			info.Door.Add(tile)
+		}
+	}
+
+	gonCount := int(player.GonTiles.Count())
+	for i := 0; i < gonCount; i++ {
+		tile := player.GonTiles.At(i)
+		for j := uint(0); j < 4; j++ {
+			info.Door.Add(tile)
+		}
+	}
+
+	ongonCount := int(player.OngonTiles.Count())
+	for i := 0; i < ongonCount; i++ {
+		tile := player.OngonTiles.At(i)
+		for j := uint(0); j < 4; j++ {
+			info.Door.Add(tile)
+		}
+	}
+
+	info.AllChow = uint(IF(player.PonTiles.Count() == 0 && player.GonTiles.Count() == 0 && player.OngonTiles.Count() == 0, 1, 0).(int))
+	info.AllPon  = uint(IF(player.EatTiles.Count() == 0, 1, 0).(int))
+	info.IsClean = uint(IF(player.EatTiles.Count() == 0 && player.PonTiles.Count() == 0 && player.GonTiles.Count() == 0, 1, 0).(int))
+	info.NoBonus = uint(IF(player.Flowers.Count()  == 0, 1, 0).(int))
+	info.IsZimo  = isZimo
+
+	*tai = scoreCalc.CountTai(info)
+
+	return (*tai).Tai > 0
 }
 
 // Hu hus tile tile
-func (player *Player) Hu(tile Tile, tai int, Type int, addOneTai, addToRoom bool, fromID int) int {
-	player.IsHu = true
-	player.HuTiles.Add(tile)
-	if Type == COMMAND["ZIMO"] {
-		player.Hand.Sub(tile)
-	}
-	if addToRoom {
-		player.room.HuTiles.Add(tile)
-	}
-	Tai     := IF(addOneTai,      tai + 1, tai).(int)
-	Tai      = IF(player.JustGon, Tai + 1, Tai).(int)
-	Tai      = IF(Type == COMMAND["ZIMO"] && player.room.GetRemainCount() > 51, 6, Tai).(int)
-	score   := int(math.Pow(2, float64(Tai - 1)))
-	message := IF(Type == COMMAND["HU"], "胡", "自摸").(string)
-	for i := 0; i < 4; i++ {
-		if Type == COMMAND["ZIMO"] && i != player.ID || Type == COMMAND["HU"] && i == fromID {
-			player.Credit                  += score
-			player.room.Players[i].Credit  -= score
-			player.room.Players[i].ScoreLog = append(player.room.Players[i].ScoreLog, NewScoreRecord(message, "to", player.Name(), tile.ToString(), -score))
+func (player *Player) Hu(tile Tile, tai TaiData, Type int, robGon bool, addToRoom bool, fromID int) int {
+	if Type == COMMAND["ZIMO"] && player.FirstDraw {
+		tai.Tai     += 16
+		tai.Message += IF(player.ID == player.room.Banker, "天胡 ", "地胡 ").(string)
+	} else if Type == COMMAND["ZIMO"] && !strings.Contains(tai.Message, "七搶一") && !strings.Contains(tai.Message, "八仙過海") {
+		tai.Tai++
+		tai.Message += "自摸 "
+		if player.room.Deck.Count() == 16 {
+			tai.Tai++
+			tai.Message += "海底撈月 "
 		}
 	}
-	if (message == "胡") {
-		player.ScoreLog = append(player.ScoreLog, NewScoreRecord(message, "from", player.room.Players[fromID].Name(), tile.ToString(), score))
-	} else {
-		player.ScoreLog = append(player.ScoreLog, NewScoreRecord(message, "", "", tile.ToString(), score * 3))
+	
+	if robGon {
+		tai.Tai++
+		tai.Message += "搶槓胡 "
 	}
-	player.MaxTai = IF(player.MaxTai < tai, tai, player.MaxTai).(int)
+	if player.JustGon {
+		tai.Tai++
+		tai.Message += "槓上花 "
+	}
+	season := uint((4 + player.ID - player.room.OpenIdx) % 4 + 1)
+	if player.Flowers[4].GetIndex(season) > 0 || player.Flowers[4].GetIndex(season + 4) > 0 {
+		tai.Tai     += int(player.Flowers[4].GetIndex(season) + player.Flowers[4].GetIndex(season + 4))
+		tai.Message += "花 "
+	}
+	
+	score := 0
+	for i := 0; i < 4; i++ {
+		if Type == COMMAND["ZIMO"] && i != player.ID || Type == COMMAND["HU"] && i == fromID {
+			tmp := IF(player.ID == player.room.Banker || i == player.room.Banker, tai.Tai + player.room.NumKeepWin, tai.Tai).(int)
+			score                          += tmp
+			player.Credit                  += tmp
+			player.room.Players[i].Credit  -= tmp
+			player.room.Players[i].ScoreLog = append(player.room.Players[i].ScoreLog, NewScoreRecord(tai.Message, "to", player.Name(), tile.ToString(), tmp))
+		}
+	}
+	if Type == COMMAND["HU"] {
+		player.ScoreLog = append(player.ScoreLog, NewScoreRecord(tai.Message, "from", player.room.Players[fromID].Name(), tile.ToString(), score))
+	} else {
+		player.ScoreLog = append(player.ScoreLog, NewScoreRecord(tai.Message, "", "", tile.ToString(), score))
+	}
 	return score
 }
 
@@ -200,10 +218,6 @@ func (player *Player) Hu(tile Tile, tai int, Type int, addOneTai, addToRoom bool
 func (player *Player) Gon(tile Tile, Type int, fromID int) int {
 	player.JustGon = true
 	for i := 0; i < IF(Type == COMMAND["PONGON"], 1, 4).(int); i++ {
-		player.Door.Add(tile)
-		if Type != COMMAND["ONGON"] {
-			player.VisiableDoor.Add(tile)
-		}
 		player.Hand.Sub(tile)
 	}
 
@@ -213,15 +227,18 @@ func (player *Player) Gon(tile Tile, Type int, fromID int) int {
 	case COMMAND["PONGON"]:
 		score   = 1
 		message = "碰槓"
+		player.PonTiles.Sub(tile)
+		player.GonTiles.Add(tile)
 	case COMMAND["ONGON"]:
 		message = "暗槓"
+		player.OngonTiles.Add(tile)
 	default:
 		message = "槓"
+		player.GonTiles.Add(tile)
 	}
 	for i := 0; i < 4; i++ {
 		if Type != COMMAND["GON"] && i != player.ID || Type == COMMAND["GON"] && i == fromID {
 			player.Credit                  += score
-			player.GonRecord[i]            += score
 			player.room.Players[i].Credit  -= score
 			player.room.Players[i].ScoreLog = append(player.room.Players[i].ScoreLog, NewScoreRecord(message, "to", player.Name(), tile.ToString(), -score))
 		}
@@ -236,18 +253,17 @@ func (player *Player) Gon(tile Tile, Type int, fromID int) int {
 
 // Pon pons the tile
 func (player *Player) Pon(tile Tile) {
-	for i := 0; i < 3; i++ {
-		player.Door.Add(tile)
-		player.VisiableDoor.Add(tile)
-	}
-	player.Hand.Sub(tile)
-	player.Hand.Sub(tile)
+	player.PonTiles.Add(tile)
+	player.Hand.Sub([]Tile{tile, tile})
 }
 
-// Tai cals the tai
-func (player *Player) Tai(tile Tile) int {
-	player.Hand.Add(tile)
-	result := CalTai(player.Hand.Translate(player.Lack), player.Door.Translate(player.Lack))
-	player.Hand.Sub(tile)
-	return result
+// Eat eats the tile
+func (player *Player) Eat(eatAction EatAction) {
+	tile := eatAction.First
+	player.EatTiles.Add(tile)
+	for i := uint(0); i < 3; i++ {
+		if tile.Value + i != eatAction.Center.Value {
+			player.Hand.Sub(NewTile(tile.Suit, tile.Value + i))
+		}
+	}
 }

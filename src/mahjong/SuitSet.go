@@ -6,7 +6,10 @@ import (
 )
 
 // SuitSet represents a set of suit
-type SuitSet [3]Suit
+type SuitSet [5]Suit
+
+// SuitTileCount represents each suit's tile count
+var SuitTileCount = [5]uint{ 9, 9, 9, 7, 8 }
 
 // NewSuitSet creates a new suit suitSet
 func NewSuitSet(full bool) SuitSet {
@@ -15,6 +18,13 @@ func NewSuitSet(full bool) SuitSet {
 	for s := 0; s < 3; s++ {
 		suitSet[s] = IF(full, Suit(t), Suit(0)).(Suit)
 	}
+
+	t, _ = strconv.ParseUint("100100100100100100100", 2, 32) // 字、風
+	suitSet[3] = IF(full, Suit(t), Suit(0)).(Suit)
+
+	t, _ = strconv.ParseUint("001001001001001001001001", 2, 32)
+	suitSet[4] = IF(full, Suit(t), Suit(0)).(Suit)
+
 	return suitSet
 }
 
@@ -27,12 +37,16 @@ func ArrayToSuitSet(tile []Tile) SuitSet {
 
 // IsEmpty returns if suit set is empty
 func (suitSet SuitSet) IsEmpty() bool {
-	return (suitSet[0] + suitSet[1] + suitSet[2]) == 0
+	count := uint32(0)
+	for i := 0; i < 5; i++ {
+		count += uint32(suitSet[i])
+	}
+	return count == 0
 }
 
 // IsContainColor return if suit set contain color
 func (suitSet SuitSet) IsContainColor(color int) bool {
-	return suitSet[color].Count() > 0
+	return uint32(suitSet[color]) > 0
 }
 
 // Have returns if suit set has tlie
@@ -43,8 +57,8 @@ func (suitSet SuitSet) Have(tile Tile) bool {
 // At returns idx th tile in suit set
 func (suitSet SuitSet) At(idx int) Tile {
 	amount := 0
-	for s := 0; s < 3; s++ {
-		for v := uint(0); v < 9; v++ {
+	for s := 0; s < 5; s++ {
+		for v := uint(0); v < SuitTileCount[s]; v++ {
 			amount += int(suitSet[s].GetIndex(v))
 			if amount > idx {
 				return NewTile(s, v)
@@ -57,7 +71,7 @@ func (suitSet SuitSet) At(idx int) Tile {
 // Count returns amount of suit set
 func (suitSet SuitSet) Count() uint {
 	amount := uint(0)
-	for s := 0; s < 3; s++ {
+	for s := 0; s < 5; s++ {
 		amount += suitSet[s].Count()
 	}
 	return amount
@@ -71,27 +85,11 @@ func (suitSet *SuitSet) Draw() Tile {
 	return tile
 }
 
-// Translate translates suit set to uint64
-func (suitSet SuitSet) Translate(lack int) uint64 {
-	first  := true
-	result := uint64(0)
-	for s := 0; s < 3; s++ {
-		if s != lack {
-			result |= uint64(suitSet[s])
-			if (first) {
-				result <<= 27
-				first = false
-			}
-		}
-	}
-	return result
-}
-
 // ToStringArray converts suit set to string array
 func (suitSet SuitSet) ToStringArray() []string {
 	var result []string
-	for s := 0; s < 3; s++ {
-		for v := uint(0); v < 9; v++ {
+	for s := 0; s < 5; s++ {
+		for v := uint(0); v < SuitTileCount[s]; v++ {
 			for n := uint(0); n < suitSet[s].GetIndex(v); n++ {
 				result = append(result, suitStr[s] + strconv.Itoa(int(v + 1)))
 			}

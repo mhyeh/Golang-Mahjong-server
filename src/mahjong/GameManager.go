@@ -10,6 +10,7 @@ import (
 )
 
 var game *GameManager
+
 // NewGameManager creates a new gameManager
 func NewGameManager() (bool) {
 	server, err := socketio.NewServer([]string{"websocket"})
@@ -17,8 +18,6 @@ func NewGameManager() (bool) {
 		log.Fatal(err)
 		return true
 	}
-
-	go InitHuTable()
 
 	rooms := make(map[string]*Room)
 	game   = &GameManager {rooms, server}

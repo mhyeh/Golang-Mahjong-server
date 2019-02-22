@@ -1,30 +1,5 @@
 package mahjong
 
-func (player *Player) checkChangeTiles(val interface{}) bool {
-	switch val.(type) {
-	case []interface{}:
-	default:
-		return false
-	}
-	valArr := val.([]interface{})
-	for i := 0; i < 3; i++ {
-		if !IsValidTile(valArr[i].(string)) {
-			return false
-		}
-	}
-	return true
-}
-
-func (player *Player) checkLack(val interface{}) bool {
-	switch val.(type) {
-	case float64:
-	default:
-		return false
-	}
-	lack := int(val.(float64))
-	return lack >= 0 && lack < 4
-}
-
 func (player *Player) checkThrow(val interface{}) bool {
 	switch val.(type) {
 	case string:
