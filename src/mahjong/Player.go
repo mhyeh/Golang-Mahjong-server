@@ -215,40 +215,21 @@ func (player *Player) Hu(tile Tile, tai TaiData, Type int, robGon bool, addToRoo
 }
 
 // Gon gons the tile
-func (player *Player) Gon(tile Tile, Type int, fromID int) int {
+func (player *Player) Gon(tile Tile, Type int, fromID int) {
 	player.JustGon = true
 	for i := 0; i < IF(Type == COMMAND["PONGON"], 1, 4).(int); i++ {
 		player.Hand.Sub(tile)
 	}
 
-	score := 2
-	var message string
 	switch Type {
 	case COMMAND["PONGON"]:
-		score   = 1
-		message = "碰槓"
 		player.PonTiles.Sub(tile)
 		player.GonTiles.Add(tile)
 	case COMMAND["ONGON"]:
-		message = "暗槓"
 		player.OngonTiles.Add(tile)
 	default:
-		message = "槓"
 		player.GonTiles.Add(tile)
 	}
-	for i := 0; i < 4; i++ {
-		if Type != COMMAND["GON"] && i != player.ID || Type == COMMAND["GON"] && i == fromID {
-			player.Credit                  += score
-			player.room.Players[i].Credit  -= score
-			player.room.Players[i].ScoreLog = append(player.room.Players[i].ScoreLog, NewScoreRecord(message, "to", player.Name(), tile.ToString(), -score))
-		}
-	}
-	if Type == COMMAND["GON"] {
-		player.ScoreLog = append(player.ScoreLog, NewScoreRecord(message, "from", player.room.Players[fromID].Name(), tile.ToString(), score))
-	} else {
-		player.ScoreLog = append(player.ScoreLog, NewScoreRecord(message, "", "", tile.ToString(), score * 3))
-	}
-	return score
 }
 
 // Pon pons the tile

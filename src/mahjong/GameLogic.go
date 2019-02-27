@@ -1,9 +1,9 @@
 package mahjong
 
 import (
+	"math/rand"
 	"sync"
 	"time"
-	"math/rand"
 )
 
 // Game State
@@ -19,7 +19,6 @@ type GameResult struct {
 	Hand     []string
 	Door     [][]string
 	Score    int
-	ScoreLog []ScoreRecord
 }
 
 // Run runs mahjong logic
@@ -27,7 +26,7 @@ func (room *Room) Run() {
 	room.NumKeepWin = 1
 	for i := 0; i < 4; i++ {
 		for j := 0; j < 4; j++ {
-			room.Banker     = j
+			room.Banker = j
 			room.setWindAndRound(i, j)
 
 			for room.KeepWin = true; room.KeepWin; {
@@ -52,13 +51,13 @@ func (room *Room) Run() {
 				} else {
 					onlyThrow := false
 					gameOver  := false
-					for ;; {
-						curPlayer   := room.Players[currentIdx]
-						throwTile   := NewTile(-1, 0)
-						act         := NewAction(COMMAND["NONE"], throwTile, 0)
+					for {
+						curPlayer := room.Players[currentIdx]
+						throwTile := NewTile(-1, 0)
+						act := NewAction(COMMAND["NONE"], throwTile, 0)
 						sevenFlower := false
 						room.State   = IdxTurn + currentIdx
-	
+
 						if onlyThrow {
 							throwTile = curPlayer.Throw(throwTile)
 							onlyThrow = false
@@ -66,7 +65,7 @@ func (room *Room) Run() {
 							act, gameOver, sevenFlower = curPlayer.Draw()
 							throwTile = act.Tile
 						}
-	
+
 						if gameOver {
 							if sevenFlower && currentIdx != room.Banker {
 								room.KeepWin    = false
@@ -77,7 +76,7 @@ func (room *Room) Run() {
 							}
 							break
 						}
-	
+
 						robGon, huIdxArray, gonIdx, ponIdx, eatAction := room.checkAction(currentIdx, act, throwTile)
 						if robGon {
 							curPlayer.Fail(act.Command)
@@ -136,13 +135,13 @@ func (room *Room) setWindAndRound(wind int, round int) {
 }
 
 func (room *Room) preproc(startIdx int) {
-	time.Sleep(5 * time.Second)
+	time.Sleep(1 * time.Second)
 	room.openDoor()
-	time.Sleep(2 * time.Second)
+	time.Sleep(1 * time.Second)
 	room.init(startIdx)
 	time.Sleep(1 * time.Second)
 	room.buHua(startIdx)
-	time.Sleep(2 * time.Second)
+	time.Sleep(1 * time.Second)
 }
 
 func (room *Room) openDoor() {
@@ -166,7 +165,7 @@ func (room *Room) init(startIdx int) {
 
 func (room *Room) buHua(startIdx int) {
 	flag := true
-	for ; flag; {
+	for flag {
 		flag = false
 		for i := 0; i < 4; i++ {
 			player := room.Players[(i + startIdx) % 4]
@@ -230,9 +229,9 @@ func (room *Room) checkRobGon(currentIdx int, gonTile Tile, huIdxArray *[]int) b
 		tai := TaiData{ -1, "" }
 		if room.Players[id].CheckHu(gonTile, 0, &tai) {
 			actionSet := NewActionSet()
-			actionSet[COMMAND["HU"]] = append(actionSet[COMMAND["HU"]], gonTile)
+			actionSet[COMMAND["HU"]] = append(actionSet[COMMAND["HU"]], gonTile.ToString())
 			go func(i int) {
-				playersAct[i - 1] = room.Players[i].Command(actionSet, COMMAND["HU"])
+				playersAct[i - 1] = room.Players[i].Command(actionSet, COMMAND["HU"], currentIdx)
 				waitGroup.Done()
 			}(id)
 		} else {
@@ -282,7 +281,7 @@ func (room *Room) checkOthers(currentIdx int, throwTile Tile, huIdxArray *[]int,
 			waitGroup.Done()
 		} else {
 			go func(i int) {
-				playersAct[i - 1] = otherPlayer.Command(actionSet, command)
+				playersAct[i - 1] = otherPlayer.Command(actionSet, command, currentIdx)
 				waitGroup.Done()
 			}(i)
 		}
@@ -334,9 +333,12 @@ func (room *Room) doAction(currentIdx int, throwTile Tile, huIdxArray []int, gon
 		if ponIdx != -1 {
 			room.Players[ponIdx].Fail(COMMAND["PON"])
 		}
+		if eatAction.Idx != -1 {
+			room.Players[eatAction.Idx].Fail(COMMAND["EAT"])
+		}
 	} else if gonIdx != -1 {
-		score := room.Players[gonIdx].Gon(throwTile, COMMAND["GON"], currentIdx)
-		room.Players[gonIdx].Success(currentIdx, COMMAND["GON"], throwTile, score)
+		room.Players[gonIdx].Success(currentIdx, COMMAND["GON"], throwTile, 0)
+		room.Players[gonIdx].Gon(throwTile, COMMAND["GON"], currentIdx)
 		currentIdx = gonIdx
 	} else if ponIdx != -1 {
 		room.Players[ponIdx].Success(currentIdx, COMMAND["PON"], throwTile, 0)
@@ -355,16 +357,15 @@ func (room *Room) doAction(currentIdx int, throwTile Tile, huIdxArray []int, gon
 func (room *Room) end() {
 	var data []GameResult
 	for _, player := range room.Players {
-		data = append(data, GameResult{ 
-			player.Hand.ToStringArray(), 
-			[][]string{ 
-				player.EatTiles.ToStringArray(), 
-				player.PonTiles.ToStringArray(), 
-				player.GonTiles.ToStringArray(), 
+		data = append(data, GameResult{
+			player.Hand.ToStringArray(),
+			[][]string{
+				player.EatTiles.ToStringArray(),
+				player.PonTiles.ToStringArray(),
+				player.GonTiles.ToStringArray(),
 				player.OngonTiles.ToStringArray(),
-			}, 
-			player.Credit, 
-			player.ScoreLog,
+			},
+			player.Credit,
 		})
 	}
 	room.BroadcastEnd(data)
