@@ -32,7 +32,7 @@ type Room struct {
 
 // NumPlayer returns the number of player in the room
 func (room Room) NumPlayer() int {
-	list := FindPlayerListInRoom(room.Name)
+	list := FindPlayerListInRoom(room.Name, -1)
 	num  := 0
 	for _, player := range list {
 		if (player.State & (READY | PLAYING)) != 0 {
@@ -48,7 +48,7 @@ func (room *Room) AddPlayer(playerList []string) {
 		index := FindPlayerByUUID(uuid)
 		PlayerList[index].Room = room.Name
 	}
-	playerLsit := FindPlayerListInRoom(room.Name)
+	playerLsit := FindPlayerListInRoom(room.Name, -1)
 	nameList   := GetNameList(playerLsit)
 	for _, player := range playerLsit {
 		(*player.Socket).Emit("readyToStart", room.Name, nameList)

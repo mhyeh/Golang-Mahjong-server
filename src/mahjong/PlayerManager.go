@@ -22,6 +22,7 @@ type IPlayer struct {
 	Socket *socketio.Socket
 	State  int
 	Index  int
+	IsBot  bool
 }
 
 // PlayerManager represents the array of pointer of IPlayer
@@ -60,7 +61,7 @@ func AddPlayer(name string) (string, bool) {
 			break
 		}
 	}
-	PlayerList = append(PlayerList, &IPlayer {name, _uuid, "", nil, WAITING, -1})
+	PlayerList = append(PlayerList, &IPlayer {name, _uuid, "", nil, WAITING, -1, len(name) > 3 && name[0:3] == "bot"})
 	return _uuid, false
 }
 
@@ -102,10 +103,10 @@ func FindPlayerBySocket(socket socketio.Socket) int {
 }
 
 // FindPlayerListInRoom gets list of player which in the same room
-func FindPlayerListInRoom(room string) []*IPlayer {
+func FindPlayerListInRoom(room string, checkIsBot int) []*IPlayer {
 	var list []*IPlayer
 	for _, player := range PlayerList {
-		if player.Room == room {
+		if player.Room == room && (checkIsBot == -1 || checkIsBot == 0 && !player.IsBot || checkIsBot == 1 && player.IsBot) {
 			list = append(list, player)
 			if len(list) == 4 {
 				break
@@ -116,10 +117,10 @@ func FindPlayerListInRoom(room string) []*IPlayer {
 }
 
 // FindPlayerListIsSameState gets list of player which are same state
-func FindPlayerListIsSameState(state int) []*IPlayer {
+func FindPlayerListIsSameState(state int, checkIsBot int) []*IPlayer {
 	var list []*IPlayer
 	for _, player := range PlayerList {
-		if player.State == state {
+		if player.State == state && (checkIsBot == -1 || checkIsBot == 0 && !player.IsBot || checkIsBot == 1 && player.IsBot) {
 			list = append(list, player)
 			if len(list) == 4 {
 				break

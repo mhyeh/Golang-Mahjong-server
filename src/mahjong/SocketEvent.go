@@ -1,8 +1,9 @@
 package mahjong
 
 import (
-	"github.com/googollee/go-socket.io"
 	"log"
+
+	"github.com/googollee/go-socket.io"
 )
 
 // SocketError is callback of socket error event
@@ -15,7 +16,7 @@ func SocketConnect(so socketio.Socket) {
 	log.Println("on connection")
 
 	so.Emit("auth")
-	
+
 	so.On("join", func(name string) (string, bool) {
 		if name == "" {
 			return "", true
@@ -69,7 +70,7 @@ func socketReady(uuid string, room string) int {
 		return -1
 	}
 
-	c := make(chan int, 1)
+	c  := make(chan int, 1)
 	fn := func(id int) {
 		c<-id
 	}
@@ -87,7 +88,7 @@ func getRoomInfo(uuid string) (string, []string, bool) {
 	}
 	player := PlayerList[index]
 	room   := player.Room
-	return room, GetNameList(FindPlayerListInRoom(room)), false
+	return room, GetNameList(FindPlayerListInRoom(room, -1)), false
 }
 
 func getReadyPlayer(room string) []string {

@@ -65,7 +65,7 @@ func Logout(socket socketio.Socket) {
 // Exec executes the whole game
 func Exec() {
 	for {
-		if WaitingNum() >= 4 {
+		if WaitingNum() >= 3 {
 			go CreateRoom()
 			time.Sleep(2 * time.Second)
 		}
@@ -75,7 +75,7 @@ func Exec() {
 
 // WaitingNum returns the number of player which state are waiting
 func WaitingNum() int {
-	return len(FindPlayerListIsSameState(WAITING))
+	return len(FindPlayerListIsSameState(WAITING, 0))
 }
 
 // CreateRoom creates a new room and add player to that room
@@ -100,7 +100,7 @@ func RemoveRoom(name string) {
 	if game.Rooms[name].Waiting {
 		game.Rooms[name].StopWaiting()
 	}
-	playerList := FindPlayerListInRoom(name)
+	playerList := FindPlayerListInRoom(name, -1)
 	for _, player := range playerList {
 		var index int
 		index = FindPlayerByUUID(player.UUID)
@@ -115,13 +115,19 @@ func RemoveRoom(name string) {
 
 // Match matchs 4 player into a room
 func Match() []string {
-	waitingList := FindPlayerListIsSameState(WAITING)
 	var sample []string
-	for i := 0; i < 4; i++ {
-		index      := rand.Int31n(int32(len(waitingList)))
-		sample      = append(sample, waitingList[index].UUID)
-		waitingList = append(waitingList[: index], waitingList[index + 1: ]...)
+
+	waitingPlayerList := FindPlayerListIsSameState(WAITING, 0)
+	for i := 0; i < 3; i++ {
+		index := rand.Int31n(int32(len(waitingPlayerList)))
+		sample = append(sample, waitingPlayerList[index].UUID)
+		waitingPlayerList = append(waitingPlayerList[: index], waitingPlayerList[index + 1: ]...)
 	}
+
+	waitingBotList := FindPlayerListIsSameState(WAITING, 1)
+	index := rand.Int31n(int32(len(waitingBotList)))
+	sample = append(sample, waitingBotList[index].UUID)
+
 	for _, uuid := range sample {
 		index := FindPlayerByUUID(uuid)
 		PlayerList[index].State = MATCHED
