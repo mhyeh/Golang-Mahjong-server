@@ -190,16 +190,22 @@ func (player *Player) Hu(tile Tile, tai TaiData, Type int, robGon bool, addToRoo
 		tai.Tai++
 		tai.Message += "槓上花 "
 	}
-	season := uint((4 + player.ID - player.room.OpenIdx) % 4 + 1)
-	if player.Flowers[4].GetIndex(season) > 0 || player.Flowers[4].GetIndex(season + 4) > 0 {
-		tai.Tai     += int(player.Flowers[4].GetIndex(season) + player.Flowers[4].GetIndex(season + 4))
+
+	season := int((4 + player.ID - player.room.OpenIdx) % 4 + 1)
+	if !strings.Contains(tai.Message, "七搶一") && !strings.Contains(tai.Message, "八仙過海") &&
+	   (player.Flowers[4].Have(0) && player.Flowers[4].Have(1) && player.Flowers[4].Have(2) && player.Flowers[4].Have(3) || 
+	    player.Flowers[4].Have(4) && player.Flowers[4].Have(5) && player.Flowers[4].Have(6) && player.Flowers[4].Have(7)) {
+		tai.Tai     += 2
+		tai.Message += "花槓 "
+	} else if player.Flowers[4].Have(season) || player.Flowers[4].Have(season + 4) {
+		tai.Tai     += int(player.Flowers[4].GetIndex(uint(season)) + player.Flowers[4].GetIndex(uint(season + 4)))
 		tai.Message += "花 "
 	}
 	
 	score := 0
 	for i := 0; i < 4; i++ {
 		if Type == COMMAND["ZIMO"] && i != player.ID || Type == COMMAND["HU"] && i == fromID {
-			tmp := IF(player.ID == player.room.Banker || i == player.room.Banker, tai.Tai + player.room.NumKeepWin, tai.Tai).(int)
+			tmp := IF(player.ID == player.room.Banker || i == player.room.Banker, tai.Tai + 1 + 2 * player.room.NumKeepWin, tai.Tai).(int)
 			score                          += tmp
 			player.Credit                  += tmp
 			player.room.Players[i].Credit  -= tmp

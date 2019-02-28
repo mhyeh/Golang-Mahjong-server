@@ -43,7 +43,7 @@ func (room *Room) Run() {
 				if flag {
 					if currentIdx != room.Banker {
 						room.KeepWin    = false
-						room.NumKeepWin = 1
+						room.NumKeepWin = 0
 					} else {
 						room.KeepWin = true
 						room.NumKeepWin++
@@ -52,9 +52,9 @@ func (room *Room) Run() {
 					onlyThrow := false
 					gameOver  := false
 					for {
-						curPlayer := room.Players[currentIdx]
-						throwTile := NewTile(-1, 0)
-						act := NewAction(COMMAND["NONE"], throwTile, 0)
+						curPlayer   := room.Players[currentIdx]
+						throwTile   := NewTile(-1, 0)
+						act         := NewAction(COMMAND["NONE"], throwTile, 0)
 						sevenFlower := false
 						room.State   = IdxTurn + currentIdx
 
@@ -69,7 +69,7 @@ func (room *Room) Run() {
 						if gameOver {
 							if sevenFlower && currentIdx != room.Banker {
 								room.KeepWin    = false
-								room.NumKeepWin = 1
+								room.NumKeepWin = 0
 							} else {
 								room.KeepWin = true
 								room.NumKeepWin++
@@ -104,7 +104,7 @@ func (room *Room) Run() {
 							}
 							if !flag {
 								room.KeepWin    = false
-								room.NumKeepWin = 1
+								room.NumKeepWin = 0
 							}
 							break
 						}
