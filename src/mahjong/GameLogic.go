@@ -23,14 +23,24 @@ type GameResult struct {
 
 // Run runs mahjong logic
 func (room *Room) Run() {
-	room.NumKeepWin = 1
+	room.NumKeepWin = 0
 	for i := 0; i < 4; i++ {
 		for j := 0; j < 4; j++ {
-			room.Banker = j
 			room.setWindAndRound(i, j)
 
+			if i == 0 && j == 0 && room.NumKeepWin == 0 {
+				room.openDoor()
+				room.Banker = room.OpenIdx
+			} else {
+				room.Banker = (room.Banker + 1) % 4
+			}
+			room.BroadcastBanker(room.Banker);
+			
 			for room.KeepWin = true; room.KeepWin; {
-				currentIdx := j
+				if !(i == 0 && j == 0 && room.NumKeepWin == 0) {
+					room.openDoor()
+				}
+				currentIdx := room.Banker
 				room.preproc(currentIdx)
 
 				flag := false
@@ -135,8 +145,6 @@ func (room *Room) setWindAndRound(wind int, round int) {
 }
 
 func (room *Room) preproc(startIdx int) {
-	time.Sleep(1 * time.Second)
-	room.openDoor()
 	time.Sleep(1 * time.Second)
 	room.init(startIdx)
 	time.Sleep(1 * time.Second)

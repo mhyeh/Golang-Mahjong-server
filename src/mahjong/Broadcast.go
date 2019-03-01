@@ -34,6 +34,11 @@ func (room Room) BroadcastOpenDoor(idx int) {
 	room.IO.BroadcastTo(room.Name, "broadcastOpenDoor", idx)
 }
 
+// BroadcastBanker broadcasts banker ID
+func (room Room) BroadcastBanker(id int) {
+	room.IO.BroadcastTo(room.Name, "broadcastBanker", id)
+}
+
 // BroadcastBuHua broadcasts the player's flower
 func (room Room) BroadcastBuHua(flowers [][]string) {
 	room.IO.BroadcastTo(room.Name, "broadcastBuHua", flowers)
