@@ -122,9 +122,6 @@ func FindPlayerListIsSameState(state int, checkIsBot int) []*IPlayer {
 	for _, player := range PlayerList {
 		if player.State == state && (checkIsBot == -1 || checkIsBot == 0 && !player.IsBot || checkIsBot == 1 && player.IsBot) {
 			list = append(list, player)
-			if len(list) == 4 {
-				break
-			}
 		}
 	}
 	return list

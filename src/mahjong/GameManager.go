@@ -65,7 +65,7 @@ func Logout(socket socketio.Socket) {
 // Exec executes the whole game
 func Exec() {
 	for {
-		if WaitingNum() >= 3 {
+		if WaitingNum(0) >= 3 && WaitingNum(1) >= 1 {
 			go CreateRoom()
 			time.Sleep(2 * time.Second)
 		}
@@ -74,8 +74,8 @@ func Exec() {
 }
 
 // WaitingNum returns the number of player which state are waiting
-func WaitingNum() int {
-	return len(FindPlayerListIsSameState(WAITING, 0))
+func WaitingNum(isBot int) int {
+	return len(FindPlayerListIsSameState(WAITING, isBot))
 }
 
 // CreateRoom creates a new room and add player to that room
