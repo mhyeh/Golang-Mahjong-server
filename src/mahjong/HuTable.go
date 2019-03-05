@@ -14,7 +14,7 @@ func NewHuTable() *HuTable {
 		huTable.Melds = append(huTable.Melds, 3 << uint(i * 3))
 	}
 	for i := 0; i < 7; i++ {
-		huTable.Melds = append(huTable.Melds, 7 << uint(i * 3))
+		huTable.Melds = append(huTable.Melds, 73 << uint(i * 3))
 	}
 	for i := 0; i < 9; i++ {
 		huTable.AllEyes = append(huTable.AllEyes, 2 << uint(i * 3))
@@ -56,5 +56,5 @@ func (huTable HuTable) Have(now uint, check uint) bool {
 
 // CanHu check if hand can hu
 func (huTable HuTable) CanHu(t uint) bool {
-	return (*huTable.PreTable)[t & 134217727] != 0
+	return ((*huTable.PreTable)[t & 134217727] & 1) != 0
 }

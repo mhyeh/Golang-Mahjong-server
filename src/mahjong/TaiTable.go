@@ -200,7 +200,7 @@ func NewTaiTable() *TaiTable {
 	sTable := NewSimpleTaiTable()
 	hTable := NewHonorsTaiTable()
 
-	taiTable := &TaiTable{sTable, hTable}
+	taiTable := &TaiTable{ sTable, hTable }
 	return taiTable
 }
 
@@ -213,7 +213,7 @@ type TaiTable struct {
 // Get gets taiTable data
 func (taiTable *TaiTable) Get(idx uint) TaiData {
 	sData := taiTable.sTable.Get(idx & 65535)
-	hData := taiTable.sTable.Get(idx >> 20)
+	hData := taiTable.hTable.Get(idx >> 20)
 	tai   := IF(sData.Tai + hData.Tai == -2, -1, sData.Tai + hData.Tai).(int)
 
 	return TaiData{ tai, sData.Message + hData.Message }

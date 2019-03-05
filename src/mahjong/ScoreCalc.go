@@ -1,5 +1,7 @@
 package mahjong
 
+import "strconv"
+
 // Wind represents wind
 type Wind byte
 
@@ -44,7 +46,7 @@ const (
 	LittleThreeDragons = uint(16384)
 	BigThreeDragons    = uint(32768)
 
-	EyeNumber          = uint(61440)
+	EyeNumber = uint(61440)
 )
 
 // NewScoreCalc creates a new ccore calculator
@@ -52,6 +54,8 @@ func NewScoreCalc() ScoreCalc {
 	taiTable     := NewTaiTable()
 	simplesTable := NewSimplesTable()
 	honorsTable  := NewHonorsTable()
+	// 23485 4845
+	println(len((*simplesTable).huTable.Table), len((*honorsTable).huTable.Table))
 	scoreCalc    := ScoreCalc{}
 	scoreCalc.TaiTable     = taiTable
 	scoreCalc.SimplesTable = simplesTable
@@ -76,12 +80,18 @@ func (scoreCalc ScoreCalc) CountTai(info HuInfo) TaiData {
 	hands   := info.Hand
 	doors   := info.Door
 
-	hands[info.CertainTile.Suit].Add(info.IsZimo << 31 | (info.CertainTile.Value) << 27)
-	f := uint(0);
+	hands[info.CertainTile.Suit] |= Suit(info.IsZimo << 31 | (info.CertainTile.Value + 1) << 27)
+	f := uint(0)
 	c := simples.huTable.Get(uint(hands[0])) // 萬
 	d := simples.huTable.Get(uint(hands[1])) // 筒
 	b := simples.huTable.Get(uint(hands[2])) // 條
 	h := simples.huTable.Get(uint(hands[3])) // 字
+
+	println(strconv.FormatInt(int64(c), 2))
+	println(strconv.FormatInt(int64(d), 2))
+	println(strconv.FormatInt(int64(b), 2))
+	println(strconv.FormatInt(int64(h), 2))
+	println()
 
 	//   bit3   bit2  bit1   bit0
 	// |  字  |  條  |  筒  |  萬  |
@@ -89,10 +99,10 @@ func (scoreCalc ScoreCalc) CountTai(info HuInfo) TaiData {
 	hasBamboo := int(IF((hands[2] + doors[2]) != 0, 1, 0).(int))
 	hasDot    := int(IF((hands[1] + doors[1]) != 0, 1, 0).(int))
 	hasChar   := int(IF((hands[0] + doors[0]) != 0, 1, 0).(int))
-	suits     := (hasZi << 3) | (hasBamboo << 2) | (hasDot << 1) | hasChar; 
-													 					
+	suits     := (hasZi << 3) | (hasBamboo << 2) | (hasDot << 1) | hasChar
+
 	honorsFeature := honors.huTable.Get(uint(hands[3]) + scoreCalc.kongToPong(uint(doors[3]))) // 門前+手上字牌(槓轉為碰)
-	
+
 	// 無法胡牌
 	if ((c & d & b & honorsFeature) & CanHu) == 0 || ((c & HasEye) + (d & HasEye) + (b & HasEye) + (honorsFeature & HasEye)) != HasEye {
 		return TaiData{ -1, "" }
@@ -118,14 +128,14 @@ func (scoreCalc ScoreCalc) CountTai(info HuInfo) TaiData {
 	if info.AllPon != 0 {
 		f |= (c & d & b) & PonPair
 	}
-	
+
 	// 門清
 	if (doors[0] + doors[1] + doors[2] + doors[3]) == 0 {
 		f |= Clean
 	}
 	// 自摸
-	f |= IF(info.IsZimo != 0, Zimo, 0).(uint)
-	
+	f |= IF(info.IsZimo != 0, Zimo, uint(0)).(uint)
+
 	// 判斷門風和圈風
 	honorsFeature &= ((uint(info.Winds) | ^uint(31)) << 4)
 	return scoreCalc.TaiTable.Get((honorsFeature << 16) | f)
@@ -133,9 +143,9 @@ func (scoreCalc ScoreCalc) CountTai(info HuInfo) TaiData {
 
 func (scoreCalc ScoreCalc) kongToPong(t uint) uint {
 	for i := uint(0); i < 9; i++ {
-		cnt := (t >> i * 3) & 7
+		cnt := (t >> (i * 3)) & 7
 		if cnt == 4 {
-			t -= 1 << i * 3
+			t -= 1 << (i * 3)
 		}
 	}
 	return t

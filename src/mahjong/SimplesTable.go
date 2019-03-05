@@ -84,7 +84,7 @@ func (simplesTable *SimplesTable) setPonPair(sets uint, curr uint, c uint) {
 
 	if sets > 0 {
 		for i := c; i <= 9; i++ {
-			simplesTable.setPonPair(sets - 1, curr + simplesTable.huTable.Melds[i], i + 1);
+			simplesTable.setPonPair(sets - 1, curr + simplesTable.huTable.Melds[i], i + 1)
 		}
 	}
 }
@@ -110,13 +110,13 @@ func (simplesTable *SimplesTable) setEyeNumber() {
 		pos := 0
 		if simplesTable.huTable.CanHu(i) {
 			for j := 0; j < 9; j++ {
-				if simplesTable.huTable.Have(i, simplesTable.huTable.Melds[j]) {
-					if simplesTable.huTable.CanHu(i - simplesTable.huTable.Melds[j]) {
-						pos = j + 1;
+				if simplesTable.huTable.Have(i, simplesTable.huTable.AllEyes[j]) {
+					if simplesTable.huTable.CanHu(i - simplesTable.huTable.AllEyes[j]) {
+						pos = j + 1
 					}
 				}
 			}
-			(*simplesTable.huTable.PreTable)[i] |= uint(pos << 12);
+			(*simplesTable.huTable.PreTable)[i] |= uint(pos << 12)
 		}
 	}
 }
@@ -129,10 +129,10 @@ func (simplesTable *SimplesTable) setTinOnlyOne() {
 					huFeature   := (*simplesTable.huTable.PreTable)[tiles]
 					zimoFeature := (*simplesTable.huTable.PreTable)[tiles]
 					tilesOfTin  := tiles - simplesTable.huTable.AllSingle[j]
-					tinCnt      := 0;
+					tinCnt      := 0
 
 					for k := 0; k < 9; k++ {
-						temp := tilesOfTin + simplesTable.huTable.AllSingle[k];
+						temp := tilesOfTin + simplesTable.huTable.AllSingle[k]
 						if temp > SIZE {
 							continue
 						}
@@ -143,18 +143,18 @@ func (simplesTable *SimplesTable) setTinOnlyOne() {
 					// 胡刻子，非自摸暗刻數-1，無獨聽
 					if simplesTable.huTable.Have(tiles, simplesTable.huTable.Melds[j + 1]) {
 						if simplesTable.huTable.CanHu(tiles - simplesTable.huTable.Melds[j + 1]) {
-							huFeature -= 1 << 9;
-							tinCnt++;
+							huFeature -= 1 << 9
+							tinCnt++
 						}
 					}
 					// 獨聽
 					if tinCnt == 1 {
-						huFeature   |= TingOnlyOne;
-						zimoFeature |= TingOnlyOne;
+						huFeature   |= TingOnlyOne
+						zimoFeature |= TingOnlyOne
 					}
 					// 平胡
 					if (((*simplesTable.huTable.PreTable)[tiles] >> 8) & 15) != j + 1 && (((*simplesTable.huTable.PreTable)[tiles] >> 9) & 7) == 0 && tinCnt > 1 {
-						huFeature |= PingHu;
+						huFeature |= PingHu
 					}
 
 					simplesTable.huTable.Table[((j + 1) << 27) | (tiles - simplesTable.huTable.AllSingle[j])]             = huFeature;
