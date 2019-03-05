@@ -8,22 +8,18 @@ import (
 
 // NewPlayer creates a new player
 func NewPlayer(room *Room, id int, uuid string) *Player {
-	return &Player{room: room, ID: id, UUID: uuid}
+	return &Player{room: room, ID: id, UUID: uuid, Credit: 0}
 }
 
 // NewScoreRecord creates a new scoreRecord
-func NewScoreRecord(message string, direct string, player string, tile string, score int) ScoreRecord {
-	if direct != "" {
-		return ScoreRecord{Message: strings.Join([]string{message, direct, player}, " "), Tile: tile, Score: score}
-	}
-	return ScoreRecord{Message: message, Tile: tile, Score: score}
+func NewScoreRecord(message string, score int) ScoreRecord {
+	return ScoreRecord{Message: message, Score: score}
 
 }
 
 // ScoreRecord represents the record of score
 type ScoreRecord struct {
 	Message string
-	Tile    string
 	Score   int
 }
 
@@ -36,7 +32,7 @@ type Player struct {
 	OngonTiles   SuitSet
 	Flowers      SuitSet
 	DiscardTiles SuitSet
-	ScoreLog     []ScoreRecord
+	ScoreLog     ScoreRecord
 	Credit       int
 	JustGon      bool
 	FirstDraw    bool
@@ -77,7 +73,6 @@ func (player *Player) Init() {
 		player.OngonTiles[i]   = 0
 	}
 
-	player.Credit  = 0
 	player.JustGon = false
 }
 
@@ -203,19 +198,21 @@ func (player *Player) Hu(tile Tile, tai TaiData, Type int, robGon bool, addToRoo
 
 	score := 0
 	for i := 0; i < 4; i++ {
+		player.room.Players[i].ScoreLog = ScoreRecord{}
 		if Type == COMMAND["ZIMO"] && i != player.ID || Type == COMMAND["HU"] && i == fromID {
-			tmp := IF(player.ID == player.room.Banker || i == player.room.Banker, tai.Tai + 1 + 2 * player.room.NumKeepWin, tai.Tai).(int)
+			tmp := BASE + IF(player.ID == player.room.Banker || i == player.room.Banker, tai.Tai + 1 + 2 * player.room.NumKeepWin, tai.Tai).(int) * TAI
 			score                          += tmp
 			player.Credit                  += tmp
 			player.room.Players[i].Credit  -= tmp
-			player.room.Players[i].ScoreLog = append(player.room.Players[i].ScoreLog, NewScoreRecord(tai.Message, "to", player.Name(), tile.ToString(), tmp))
+			player.room.Players[i].ScoreLog = NewScoreRecord(tai.Message, -tmp)
 		}
 	}
-	if Type == COMMAND["HU"] {
-		player.ScoreLog = append(player.ScoreLog, NewScoreRecord(tai.Message, "from", player.room.Players[fromID].Name(), tile.ToString(), score))
-	} else {
-		player.ScoreLog = append(player.ScoreLog, NewScoreRecord(tai.Message, "", "", tile.ToString(), score))
-	}
+	// if Type == COMMAND["HU"] {
+	// 	player.ScoreLog = NewScoreRecord(tai.Message, score)
+	// } else {
+	// 	player.ScoreLog = NewScoreRecord(tai.Message, score)
+	// }
+	player.ScoreLog = NewScoreRecord(tai.Message, score)
 	return score
 }
 

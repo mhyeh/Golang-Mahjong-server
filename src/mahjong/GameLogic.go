@@ -19,6 +19,7 @@ type GameResult struct {
 	Hand     []string
 	Door     [][]string
 	Score    int
+	ScoreLog ScoreRecord
 }
 
 // Run runs mahjong logic
@@ -91,18 +92,21 @@ func (room *Room) Run() {
 						if robGon {
 							curPlayer.Fail(act.Command)
 							room.BroadcastRobGon(curPlayer.ID, act.Tile)
-						} else if act.Command != COMMAND["NONE"] {
+						} else if act.Command != COMMAND["NONE"] && (act.Command & COMMAND["ZIMO"]) == 0 {
 							curPlayer.Success(currentIdx, act.Command, act.Tile, act.Score)
+						} else if (act.Command & COMMAND["ZIMO"]) != 0 {
+							huIdxArray = append(huIdxArray, curPlayer.ID)
 						}
 						curPlayer.JustGon = false
-
+						
 						currentIdx, onlyThrow = room.doAction(currentIdx, throwTile, huIdxArray, gonIdx, ponIdx, eatAction)
 						if currentIdx == curPlayer.ID && len(huIdxArray) == 0 && (act.Command & COMMAND["ONGON"]) == 0 && (act.Command & COMMAND["PONGON"]) == 0 {
 							curPlayer.DiscardTiles.Add(throwTile)
 							currentIdx = (currentIdx + 1) % 4
 						}
-
+						
 						if len(huIdxArray) > 0 {
+							room.end()
 							flag := false
 							for _, huIdx := range huIdxArray {
 								if huIdx == room.Banker {
@@ -119,13 +123,13 @@ func (room *Room) Run() {
 							break
 						}
 						if room.Deck.Count() <= 16 {
+							room.end()
 							room.KeepWin = true
 							room.NumKeepWin++
 							break
 						}
 					}
 				}
-				room.end()
 				time.Sleep(20 * time.Second)
 			}
 		}
@@ -268,8 +272,9 @@ func (room *Room) robGon(currentIdx int, playersAct [3]Action, huTile Tile, huId
 		if (playerAct.Command & COMMAND["HU"]) != 0 {
 			tai := TaiData{ -1, "" }
 			room.Players[id].CheckHu(huTile, 0, &tai)
-			score := room.Players[id].Hu(huTile, tai, COMMAND["HU"], true, !fail, currentIdx)
-			room.Players[id].Success(currentIdx, COMMAND["HU"], huTile, score)
+			room.Players[id].Hu(huTile, tai, COMMAND["HU"], true, !fail, currentIdx)
+			// score := room.Players[id].Hu(huTile, tai, COMMAND["HU"], true, !fail, currentIdx)
+			// room.Players[id].Success(currentIdx, COMMAND["HU"], huTile, score)
 			if !fail {
 				curPlayer.GonTiles.Sub(huTile)
 				curPlayer.PonTiles.Add(huTile)
@@ -312,9 +317,10 @@ func (room *Room) checkOthers(currentIdx int, throwTile Tile, huIdxArray *[]int,
 		if (playerAct.Command & COMMAND["HU"]) != 0 {
 			tai := TaiData{ -1, "" }
 			otherPlayer.CheckHu(throwTile, 0, &tai)
-			score      := otherPlayer.Hu(playerAct.Tile, tai, COMMAND["HU"], false, len(*huIdxArray) == 0, currentIdx)
+			otherPlayer.Hu(playerAct.Tile, tai, COMMAND["HU"], false, len(*huIdxArray) == 0, currentIdx)
+			// score      := otherPlayer.Hu(playerAct.Tile, tai, COMMAND["HU"], false, len(*huIdxArray) == 0, currentIdx)
 			*huIdxArray = append(*huIdxArray, playerID)
-			otherPlayer.Success(currentIdx, COMMAND["HU"], playerAct.Tile, score)
+			// otherPlayer.Success(currentIdx, COMMAND["HU"], playerAct.Tile, score)
 		} else if (playerAct.Command & COMMAND["GON"]) != 0 {
 			if len(*huIdxArray) == 0 && *gonIdx == -1 {
 				*gonIdx = playerID
@@ -383,6 +389,7 @@ func (room *Room) end() {
 				player.OngonTiles.ToStringArray(),
 			},
 			player.Credit,
+			player.ScoreLog,
 		})
 	}
 	room.BroadcastEnd(data)

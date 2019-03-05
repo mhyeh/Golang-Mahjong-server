@@ -6,6 +6,12 @@ import (
 	socketio "github.com/googollee/go-socket.io"
 )
 
+// BASE represents base score
+const BASE = 3
+
+// TAI represents base tai
+const TAI  = 1
+
 // NewRoom creates a new room
 func NewRoom(name string) *Room {
 	return &Room { Name: name, Waiting: false, State: BeforeStart }
