@@ -28,6 +28,7 @@ type Room struct {
 	Wind         int
 	Round        int
 	OpenIdx      int
+	EastIdx      int
 }
 
 // NumPlayer returns the number of player in the room

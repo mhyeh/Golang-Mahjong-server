@@ -29,16 +29,16 @@ func (room *Room) Run() {
 			room.setWindAndRound(i, j)
 
 			if i == 0 && j == 0 && room.NumKeepWin == 0 {
-				room.openDoor()
+				room.openDoor(true)
 				room.Banker = room.OpenIdx
 			} else {
 				room.Banker = (room.Banker + 1) % 4
 			}
 			room.BroadcastBanker(room.Banker);
-			
+
 			for room.KeepWin = true; room.KeepWin; {
 				if !(i == 0 && j == 0 && room.NumKeepWin == 0) {
-					room.openDoor()
+					room.openDoor(false)
 				}
 				currentIdx := room.Banker
 				room.preproc(currentIdx)
@@ -130,6 +130,11 @@ func (room *Room) Run() {
 			}
 		}
 	}
+
+	players := FindPlayerListInRoom(room.Name, 1)
+	for _, player := range players {
+		player.State = WAITING
+	}
 }
 
 func (room *Room) setWindAndRound(wind int, round int) {
@@ -152,9 +157,13 @@ func (room *Room) preproc(startIdx int) {
 	time.Sleep(1 * time.Second)
 }
 
-func (room *Room) openDoor() {
+func (room *Room) openDoor(isFirst bool) {
 	room.OpenIdx = int(rand.Int31n(4))
 	room.BroadcastOpenDoor(room.OpenIdx)
+	if isFirst {
+		room.EastIdx = room.OpenIdx
+		room.BroadcastSetSeat(room.EastIdx)
+	}
 }
 
 func (room *Room) init(startIdx int) {
@@ -377,7 +386,7 @@ func (room *Room) end() {
 		})
 	}
 	room.BroadcastEnd(data)
-	// players := FindPlayerListInRoom(room.Name)
+	// players := FindPlayerListInRoom(room.Name, 1)
 	// for _, player := range players {
 	// 	player.State = WAITING
 	// }
