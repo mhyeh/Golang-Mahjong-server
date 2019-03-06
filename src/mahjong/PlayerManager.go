@@ -14,15 +14,21 @@ const (
 	LEAVE   = 8
 )
 
+// NewIPlayer creates a new player info
+func NewIPlayer(name string, uuid string) *IPlayer {
+	return &IPlayer{ name, uuid, "", nil, WAITING, -1, len(name) > 3 && name[0:3] == "bot", 2 }
+}
+
 // IPlayer represents the player's info
 type IPlayer struct {
-	Name   string
-	UUID   string
-	Room   string
-	Socket *socketio.Socket
-	State  int
-	Index  int
-	IsBot  bool
+	Name       string
+	UUID       string
+	Room       string
+	Socket     *socketio.Socket
+	State      int
+	Index      int
+	IsBot      bool
+	LeaveCount int
 }
 
 // PlayerManager represents the array of pointer of IPlayer
@@ -61,7 +67,7 @@ func AddPlayer(name string) (string, bool) {
 			break
 		}
 	}
-	PlayerList = append(PlayerList, &IPlayer {name, _uuid, "", nil, WAITING, -1, len(name) > 3 && name[0:3] == "bot"})
+	PlayerList = append(PlayerList, NewIPlayer(name, _uuid))
 	return _uuid, false
 }
 
@@ -131,8 +137,21 @@ func FindPlayerListIsSameState(state int, checkIsBot int) []*IPlayer {
 func Auth(room string, uuid string) bool {
 	for _, player := range PlayerList {
 		if player.Room == room && player.UUID == uuid {
+			if player.State != MATCHED {
+				player.LeaveCount++
+				println(player.Name, player.LeaveCount)
+			}
 			return true
 		}
 	}
 	return false
+}
+
+//Disconnect handles the player's socket disconnect
+func Disconnect(socket socketio.Socket) int {
+	index := FindPlayerBySocket(socket)
+	if index != -1 {
+		PlayerList[index].LeaveCount--
+	}
+	return index
 }

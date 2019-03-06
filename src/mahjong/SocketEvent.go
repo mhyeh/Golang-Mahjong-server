@@ -63,7 +63,8 @@ func SocketConnect(so socketio.Socket) {
 
 	so.On("disconnection", func() {
 		log.Println("on disconnect")
-		Logout(so)
+		index := Disconnect(so)
+		Logout(index)
 	})
 }
 

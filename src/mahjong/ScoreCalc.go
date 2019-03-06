@@ -1,7 +1,5 @@
 package mahjong
 
-import "strconv"
-
 // Wind represents wind
 type Wind byte
 
@@ -54,8 +52,6 @@ func NewScoreCalc() ScoreCalc {
 	taiTable     := NewTaiTable()
 	simplesTable := NewSimplesTable()
 	honorsTable  := NewHonorsTable()
-	// 23485 4845
-	println(len((*simplesTable).huTable.Table), len((*honorsTable).huTable.Table))
 	scoreCalc    := ScoreCalc{}
 	scoreCalc.TaiTable     = taiTable
 	scoreCalc.SimplesTable = simplesTable
@@ -86,12 +82,6 @@ func (scoreCalc ScoreCalc) CountTai(info HuInfo) TaiData {
 	d := simples.huTable.Get(uint(hands[1])) // 筒
 	b := simples.huTable.Get(uint(hands[2])) // 條
 	h := simples.huTable.Get(uint(hands[3])) // 字
-
-	println(strconv.FormatInt(int64(c), 2))
-	println(strconv.FormatInt(int64(d), 2))
-	println(strconv.FormatInt(int64(b), 2))
-	println(strconv.FormatInt(int64(h), 2))
-	println()
 
 	//   bit3   bit2  bit1   bit0
 	// |  字  |  條  |  筒  |  萬  |
