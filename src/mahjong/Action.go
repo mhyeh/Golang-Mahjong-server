@@ -189,7 +189,7 @@ func (player *Player) getAvaliableAction(id int, isDraw bool, tile Tile, tai Tai
 func (player *Player) checkDrawAction(tile Tile, tai TaiData) (ActionSet, int) {
 	actionSet := NewActionSet()
 	command   := 0
-	if tai.Tai > 0 {
+	if tai.Tai >= 0 {
 		command |= COMMAND["ZIMO"]
 		actionSet[COMMAND["ZIMO"]] = append(actionSet[COMMAND["ZIMO"]], tile.ToString())
 	}
@@ -213,7 +213,7 @@ func (player *Player) checkNonDrawAction(id int, tile Tile, tai TaiData) (Action
 	actionSet := NewActionSet()
 	command   := 0
 	tileStr   := tile.ToString()
-	if tai.Tai > 0 {
+	if tai.Tai >= 0 {
 		command |= COMMAND["HU"]
 		actionSet[COMMAND["HU"]] = append(actionSet[COMMAND["HU"]], tileStr)
 	}
@@ -232,9 +232,9 @@ func (player *Player) checkNonDrawAction(id int, tile Tile, tai TaiData) (Action
 		for i := int(tile.Value) - 2; i <= int(tile.Value); i++ {
 			flag := true
 			for j := 0; j < 3; j++ {
-				if (i + j <= 0) || (i + j > 9) || !player.Hand.Have(NewTile(tile.Suit, uint(i + j))) {
+				if (i + j < 0) || (i + j >= 9) || !player.Hand.Have(NewTile(tile.Suit, uint(i + j))) {
 					flag = false
-					i += j
+					i   += j
 					break
 				}
 			}

@@ -14,7 +14,7 @@ const TAI  = 1
 
 // NewRoom creates a new room
 func NewRoom(name string) *Room {
-	return &Room { Name: name, Waiting: false, State: BeforeStart }
+	return &Room{ Name: name, Waiting: false, State: BeforeStart }
 }
 
 // Room represents a round of mahjong

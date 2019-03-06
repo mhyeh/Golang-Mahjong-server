@@ -132,6 +132,7 @@ func RemoveRoom(name string) {
 			RemovePlayer(index)
 		}
 	}
+	(*game.Rooms[name]) = Room{}
 	delete(game.Rooms, name)
 }
 

@@ -24,6 +24,9 @@ type GameResult struct {
 
 // Run runs mahjong logic
 func (room *Room) Run() {
+	defer func() {
+		recover()
+	}()
 	room.NumKeepWin = 0
 	for i := 0; i < 4; i++ {
 		for j := 0; j < 4; j++ {
