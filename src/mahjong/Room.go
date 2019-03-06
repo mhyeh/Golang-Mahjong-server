@@ -103,11 +103,13 @@ func (room *Room) Accept(uuid string, callback func(int)) {
 		callback(-1)
 		return
 	}
+	game.Locker.Lock()
 	player := PlayerList[index]
 	idx    := room.NumPlayer()
 	room.BroadcastReady(player.Name)
 	callback(idx)
-	player.Index = idx
 	room.Players = append(room.Players, NewPlayer(room, idx, player.UUID))
+	player.Index = idx
 	PlayerList[index].State = READY
+	game.Locker.Unlock()
 }

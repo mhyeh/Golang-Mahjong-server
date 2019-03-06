@@ -4,6 +4,7 @@ import (
 	"math/rand"
 	"time"
 	"log"
+	"sync"
 
 	"github.com/googollee/go-socket.io";
 	"github.com/satori/go.uuid";
@@ -20,7 +21,7 @@ func NewGameManager() (bool) {
 	}
 
 	rooms := make(map[string]*Room)
-	game   = &GameManager {rooms, server}
+	game   = &GameManager {rooms, server, sync.Mutex{}}
 	return false
 }
 
@@ -28,6 +29,7 @@ func NewGameManager() (bool) {
 type GameManager struct {
 	Rooms  map[string]*Room
 	Server *socketio.Server
+	Locker sync.Mutex
 }
 
 // GetServer returns socket io server
