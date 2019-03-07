@@ -139,7 +139,6 @@ func Auth(room string, uuid string) bool {
 		if player.Room == room && player.UUID == uuid {
 			if player.State != MATCHED {
 				player.LeaveCount++
-				println(player.Name, player.LeaveCount)
 			}
 			return true
 		}

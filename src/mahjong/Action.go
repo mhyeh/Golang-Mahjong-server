@@ -253,6 +253,7 @@ func (player *Player) procDrawCommand(drawTile Tile, act *Action, tai TaiData) {
 	} else if (act.Command & (COMMAND["ONGON"] | COMMAND["PONGON"])) != 0 {
 		player.Gon(act.Tile, act.Command, -1)
 	} else {
+		time.Sleep(1 * time.Second)
 		act.Tile = player.Throw(drawTile)
 	}
 }

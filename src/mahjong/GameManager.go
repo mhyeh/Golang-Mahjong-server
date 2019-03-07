@@ -52,6 +52,7 @@ func Login(name string, socket *socketio.Socket) (string, bool) {
 
 // Logout handles player's logout
 func Logout(index int) {
+	game.Locker.Lock()
 	if index >= 0 && index < len(PlayerList) {
 		if PlayerList[index].State == WAITING {
 			RemovePlayer(index)
@@ -62,7 +63,7 @@ func Logout(index int) {
 			players := FindPlayerListInRoom(PlayerList[index].Room, 0)
 			flag    := true
 			for _, player := range players {
-				if player.LeaveCount == 1 {
+				if player.LeaveCount > 0 {
 					flag = false
 					break
 				}
@@ -77,6 +78,7 @@ func Logout(index int) {
 		// 	RemovePlayer(index)
 		// }
 	}
+	game.Locker.Unlock()
 }
 
 // Exec executes the whole game
@@ -131,7 +133,11 @@ func RemoveRoom(name string) {
 		if game.Rooms[name].Waiting {
 			PlayerList[index].State = WAITING
 		} else {
-			RemovePlayer(index)
+			if PlayerList[index].IsBot {
+				PlayerList[index].State = WAITING
+			} else {
+				RemovePlayer(index)
+			}
 		}
 	}
 	(*game.Rooms[name]) = Room{}
