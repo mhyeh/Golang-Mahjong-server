@@ -73,7 +73,8 @@ func (player *Player) Init() {
 		player.OngonTiles[i]   = 0
 	}
 
-	player.JustGon = false
+	player.JustGon  = false
+	player.ScoreLog = ScoreRecord{}
 }
 
 // CheckPon checks if the player can pon
@@ -167,13 +168,9 @@ func (player *Player) Hu(tile Tile, tai TaiData, Type int, robGon bool, addToRoo
 	if Type == COMMAND["ZIMO"] && player.FirstDraw {
 		tai.Tai     += 16
 		tai.Message += IF(player.ID == player.room.Banker, "天胡 ", "地胡 ").(string)
-	} else if Type == COMMAND["ZIMO"] && !strings.Contains(tai.Message, "七搶一") && !strings.Contains(tai.Message, "八仙過海") {
-		tai.Tai++
-		tai.Message += "自摸 "
-		if player.room.Deck.Count() == 16 {
+	} else if Type == COMMAND["ZIMO"] && !strings.Contains(tai.Message, "七搶一") && !strings.Contains(tai.Message, "八仙過海") && player.room.Deck.Count() == 16 {
 			tai.Tai++
 			tai.Message += "海底撈月 "
-		}
 	}
 
 	if robGon {
@@ -185,7 +182,7 @@ func (player *Player) Hu(tile Tile, tai TaiData, Type int, robGon bool, addToRoo
 		tai.Message += "槓上花 "
 	}
 
-	season := int((4 + player.ID - player.room.OpenIdx) % 4 + 1)
+	season := (4 + player.ID - player.room.OpenIdx) % 4
 	if !strings.Contains(tai.Message, "七搶一") && !strings.Contains(tai.Message, "八仙過海") &&
 		(player.Flowers[4].Have(0) && player.Flowers[4].Have(1) && player.Flowers[4].Have(2) && player.Flowers[4].Have(3) ||
 		 player.Flowers[4].Have(4) && player.Flowers[4].Have(5) && player.Flowers[4].Have(6) && player.Flowers[4].Have(7)) {
@@ -194,6 +191,11 @@ func (player *Player) Hu(tile Tile, tai TaiData, Type int, robGon bool, addToRoo
 	} else if player.Flowers[4].Have(season) || player.Flowers[4].Have(season + 4) {
 		tai.Tai     += int(player.Flowers[4].GetIndex(uint(season)) + player.Flowers[4].GetIndex(uint(season + 4)))
 		tai.Message += "花 "
+	}
+	if player.Hand[3].GetIndex(uint(season)) >= 3 || player.PonTiles[3].Have(season) || player.GonTiles[3].Have(season) || player.OngonTiles[3].Have(season) {
+		msg := []string{"東", "南", "西", "北"}
+		tai.Tai++
+		tai.Message += msg[season] + "風位"
 	}
 
 	score := 0

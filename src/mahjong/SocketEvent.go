@@ -58,7 +58,7 @@ func SocketConnect(so socketio.Socket) {
 	so.On("getCurrentIdx",   getCurrentIdx)
 	so.On("getScore",        getScore)
 	so.On("getOpenIdx",      getOpenIdx)
-	so.On("getBankerID",     getBankerID)
+	so.On("getBanker",       getBanker)
 	so.On("getEastIdx",      getEastIdx)
 
 	so.On("disconnection", func() {
@@ -193,11 +193,11 @@ func getOpenIdx(room string) int {
 	return game.Rooms[room].OpenIdx
 }
 
-func getBankerID(room string) int {
+func getBanker(room string) (int, int) {
 	if game.Rooms[room] == nil {
-		return -1
+		return -1, -1
 	}
-	return game.Rooms[room].Banker
+	return game.Rooms[room].Banker, game.Rooms[room].NumKeepWin
 }
 
 func getEastIdx(room string) int {

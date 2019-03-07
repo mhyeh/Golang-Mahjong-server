@@ -38,12 +38,12 @@ func (room *Room) Run() {
 			} else {
 				room.Banker = (room.Banker + 1) % 4
 			}
-			room.BroadcastBanker(room.Banker);
-
+			
 			for room.KeepWin = true; room.KeepWin; {
 				if !(i == 0 && j == 0 && room.NumKeepWin == 0) {
 					room.openDoor(false)
 				}
+				room.BroadcastBanker(room.Banker, room.NumKeepWin);
 				currentIdx := room.Banker
 				room.preproc(currentIdx)
 
@@ -66,6 +66,8 @@ func (room *Room) Run() {
 					onlyThrow := false
 					gameOver  := false
 					for {
+						time.Sleep(1 * time.Second)
+
 						curPlayer   := room.Players[currentIdx]
 						throwTile   := NewTile(-1, 0)
 						act         := NewAction(COMMAND["NONE"], throwTile, 0)
@@ -165,12 +167,18 @@ func (room *Room) preproc(startIdx int) {
 }
 
 func (room *Room) openDoor(isFirst bool) {
-	room.OpenIdx = int(rand.Int31n(4))
-	room.BroadcastOpenDoor(room.OpenIdx)
+	dice := int(rand.Int31n(16)) + 2
+	if isFirst {
+		room.OpenIdx = dice % 4
+	} else {
+		room.OpenIdx = (room.Banker + dice) % 4
+	}
+	room.BroadcastOpenDoor(room.OpenIdx, dice + 1)
 	if isFirst {
 		room.EastIdx = room.OpenIdx
 		room.BroadcastSetSeat(room.EastIdx)
 	}
+	time.Sleep(3 * time.Second)
 }
 
 func (room *Room) init(startIdx int) {
@@ -318,12 +326,7 @@ func (room *Room) checkOthers(currentIdx int, throwTile Tile, huIdxArray *[]int,
 		playerAct    = playersAct[i - 1]
 
 		if (playerAct.Command & COMMAND["HU"]) != 0 {
-			tai := TaiData{ -1, "" }
-			otherPlayer.CheckHu(throwTile, 0, &tai)
-			otherPlayer.Hu(playerAct.Tile, tai, COMMAND["HU"], false, len(*huIdxArray) == 0, currentIdx)
-			// score      := otherPlayer.Hu(playerAct.Tile, tai, COMMAND["HU"], false, len(*huIdxArray) == 0, currentIdx)
 			*huIdxArray = append(*huIdxArray, playerID)
-			// otherPlayer.Success(currentIdx, COMMAND["HU"], playerAct.Tile, score)
 		} else if (playerAct.Command & COMMAND["GON"]) != 0 {
 			if len(*huIdxArray) == 0 && *gonIdx == -1 {
 				*gonIdx = playerID
@@ -344,6 +347,21 @@ func (room *Room) checkOthers(currentIdx int, throwTile Tile, huIdxArray *[]int,
 			} else {
 				otherPlayer.Fail(playerAct.Command)
 			}
+		}
+	}
+	if len(*huIdxArray) == 1 || len(*huIdxArray) == 2 {
+		tai := TaiData{ -1, "" }
+		room.Players[(*huIdxArray)[0]].CheckHu(throwTile, 0, &tai)
+		room.Players[(*huIdxArray)[0]].Hu(playerAct.Tile, tai, COMMAND["HU"], false, true, currentIdx)
+	} else if len(*huIdxArray) == 3 {
+		for i := 1; i < 4; i++ {
+			playerID    := (i + currentIdx) % 4
+			otherPlayer := room.Players[playerID]
+			playerAct    = playersAct[i - 1]
+	
+			tai := TaiData{ -1, "" }
+			otherPlayer.CheckHu(throwTile, 0, &tai)
+			otherPlayer.Hu(playerAct.Tile, tai, COMMAND["HU"], false, i == 1, currentIdx)
 		}
 	}
 }
@@ -396,8 +414,4 @@ func (room *Room) end() {
 		})
 	}
 	room.BroadcastEnd(data)
-	// players := FindPlayerListInRoom(room.Name, 1)
-	// for _, player := range players {
-	// 	player.State = WAITING
-	// }
 }

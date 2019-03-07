@@ -29,9 +29,9 @@ func (room Room) BroadcastWindAndRound(wind int, round int) {
 	room.IO.BroadcastTo(room.Name, "broadcastWindAndRound", wind, round)
 }
 
-// BroadcastOpenDoor broadcasts poen door index
-func (room Room) BroadcastOpenDoor(idx int) {
-	room.IO.BroadcastTo(room.Name, "broadcastOpenDoor", idx)
+// BroadcastOpenDoor broadcasts poen door index and dice number
+func (room Room) BroadcastOpenDoor(idx int, dice int) {
+	room.IO.BroadcastTo(room.Name, "broadcastOpenDoor", idx, dice)
 }
 
 // BroadcastSetSeat broadcasts east seat idx
@@ -40,8 +40,8 @@ func (room Room) BroadcastSetSeat(idx int) {
 }
 
 // BroadcastBanker broadcasts banker ID
-func (room Room) BroadcastBanker(id int) {
-	room.IO.BroadcastTo(room.Name, "broadcastBanker", id)
+func (room Room) BroadcastBanker(id int, keepWin int) {
+	room.IO.BroadcastTo(room.Name, "broadcastBanker", id, keepWin)
 }
 
 // BroadcastBuHua broadcasts the player's flower
