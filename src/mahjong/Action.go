@@ -217,7 +217,7 @@ func (player *Player) checkNonDrawAction(id int, tile Tile, tai TaiData) (Action
 		command |= COMMAND["HU"]
 		actionSet[COMMAND["HU"]] = append(actionSet[COMMAND["HU"]], tileStr)
 	}
-	if player.Hand[tile.Suit].GetIndex(tile.Value) == 3 {
+	if player.Hand[tile.Suit].GetIndex(tile.Value) == 3 && (id + 1) % 4 != player.ID {
 		command |= COMMAND["GON"]
 		actionSet[COMMAND["GON"]] = append(actionSet[COMMAND["GON"]], tileStr)
 	}

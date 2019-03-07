@@ -128,11 +128,11 @@ func (simplesTable *SimplesTable) setTinOnlyOne() {
 				if simplesTable.huTable.Have(tiles, simplesTable.huTable.AllSingle[j]) {
 					huFeature   := (*simplesTable.huTable.PreTable)[tiles]
 					zimoFeature := (*simplesTable.huTable.PreTable)[tiles]
-					tilesOfTin  := tiles - simplesTable.huTable.AllSingle[j]
+					readyHand   := tiles - simplesTable.huTable.AllSingle[j]
 					tinCnt      := 0
 
 					for k := 0; k < 9; k++ {
-						temp := tilesOfTin + simplesTable.huTable.AllSingle[k]
+						temp := readyHand + simplesTable.huTable.AllSingle[k]
 						if temp > SIZE {
 							continue
 						}
@@ -153,8 +153,8 @@ func (simplesTable *SimplesTable) setTinOnlyOne() {
 						zimoFeature |= TingOnlyOne
 					}
 					// 平胡
-					if (((*simplesTable.huTable.PreTable)[tiles] >> 8) & 15) != j + 1 && (((*simplesTable.huTable.PreTable)[tiles] >> 9) & 7) == 0 && tinCnt > 1 {
-						huFeature |= PingHu
+					if (((*simplesTable.huTable.PreTable)[tiles] >> 12) & 15) == j + 1 || tinCnt == 1 {
+						huFeature &= ^PingHu
 					}
 
 					simplesTable.huTable.Table[((j + 1) << 27) | (tiles - simplesTable.huTable.AllSingle[j])]             = huFeature;

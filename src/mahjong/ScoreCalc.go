@@ -104,7 +104,7 @@ func (scoreCalc ScoreCalc) CountTai(info HuInfo) TaiData {
 	f |= concealedPonCnt | tingOnlyOne | onlyHasEye | HasEye | CanHu
 
 	//平胡(門前全為吃牌且無花)
-	if info.AllChow != 0 && info.NoBonus != 0 {
+	if info.AllChow != 0 && info.NoBonus != 0 && int(hands[3] + doors[3]) == 0 {
 		f |= (c & d & b & h) & PingHu
 	}
 

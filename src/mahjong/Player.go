@@ -12,8 +12,8 @@ func NewPlayer(room *Room, id int, uuid string) *Player {
 }
 
 // NewScoreRecord creates a new scoreRecord
-func NewScoreRecord(message string, score int) ScoreRecord {
-	return ScoreRecord{Message: message, Score: score}
+func NewScoreRecord(message string, score int, tile string) ScoreRecord {
+	return ScoreRecord{Message: message, Score: score, Tile: tile}
 
 }
 
@@ -21,6 +21,7 @@ func NewScoreRecord(message string, score int) ScoreRecord {
 type ScoreRecord struct {
 	Message string
 	Score   int
+	Tile    string
 }
 
 // Player represents a player in mahjong
@@ -183,19 +184,26 @@ func (player *Player) Hu(tile Tile, tai TaiData, Type int, robGon bool, addToRoo
 	}
 
 	season := (4 + player.ID - player.room.OpenIdx) % 4
-	if !strings.Contains(tai.Message, "七搶一") && !strings.Contains(tai.Message, "八仙過海") &&
-		(player.Flowers[4].Have(0) && player.Flowers[4].Have(1) && player.Flowers[4].Have(2) && player.Flowers[4].Have(3) ||
-		 player.Flowers[4].Have(4) && player.Flowers[4].Have(5) && player.Flowers[4].Have(6) && player.Flowers[4].Have(7)) {
-		tai.Tai     += 2
-		tai.Message += "花槓 "
-	} else if player.Flowers[4].Have(season) || player.Flowers[4].Have(season + 4) {
-		tai.Tai     += int(player.Flowers[4].GetIndex(uint(season)) + player.Flowers[4].GetIndex(uint(season + 4)))
-		tai.Message += "花 "
+	if !strings.Contains(tai.Message, "七搶一") && !strings.Contains(tai.Message, "八仙過海") {
+		if (player.Flowers[4].Have(0) && player.Flowers[4].Have(1) && player.Flowers[4].Have(2) && player.Flowers[4].Have(3) ||
+		player.Flowers[4].Have(4) && player.Flowers[4].Have(5) && player.Flowers[4].Have(6) && player.Flowers[4].Have(7)) {
+			tai.Tai     += 2
+			tai.Message += "花槓 "
+		} else if player.Flowers[4].Have(season) {
+			msg := []string{"春", "夏", "秋", "冬"}
+			tai.Tai++
+			tai.Message += msg[season] + " "
+		} else if player.Flowers[4].Have(season + 4) {
+			msg := []string{"梅", "蘭", "竹", "菊"}
+			tai.Tai++
+			tai.Message += msg[season] + " "
+		}
 	}
+		
 	if player.Hand[3].GetIndex(uint(season)) >= 3 || player.PonTiles[3].Have(season) || player.GonTiles[3].Have(season) || player.OngonTiles[3].Have(season) {
 		msg := []string{"東", "南", "西", "北"}
 		tai.Tai++
-		tai.Message += msg[season] + "風位"
+		tai.Message += msg[season] + "風位 "
 	}
 
 	score := 0
@@ -206,7 +214,7 @@ func (player *Player) Hu(tile Tile, tai TaiData, Type int, robGon bool, addToRoo
 			score                          += tmp
 			player.Credit                  += tmp
 			player.room.Players[i].Credit  -= tmp
-			player.room.Players[i].ScoreLog = NewScoreRecord(tai.Message, -tmp)
+			player.room.Players[i].ScoreLog = NewScoreRecord(tai.Message, -tmp, tile.ToString())
 		}
 	}
 	// if Type == COMMAND["HU"] {
@@ -214,7 +222,7 @@ func (player *Player) Hu(tile Tile, tai TaiData, Type int, robGon bool, addToRoo
 	// } else {
 	// 	player.ScoreLog = NewScoreRecord(tai.Message, score)
 	// }
-	player.ScoreLog = NewScoreRecord(tai.Message, score)
+	player.ScoreLog = NewScoreRecord(tai.Message, score, tile.ToString())
 	return score
 }
 

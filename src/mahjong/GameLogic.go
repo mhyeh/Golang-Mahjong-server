@@ -83,6 +83,7 @@ func (room *Room) Run() {
 						}
 
 						if gameOver {
+							room.end()
 							if sevenFlower && currentIdx != room.Banker {
 								room.KeepWin    = false
 								room.NumKeepWin = 0

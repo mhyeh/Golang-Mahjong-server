@@ -145,22 +145,22 @@ func (honorsTaiTable *HonorsTaiTable) initTable() {
 
 		if (i & (East >> 4)) != 0 {
 			tai += honorsTai
-			str += "東風 "
+			str += IF((i& Bonus) != 0, "東風東 ", "東風 ").(string)
 			honorCnt++
 		}
 		if (i & (South >> 4)) != 0 {
 			tai += honorsTai
-			str += "南風 "
+			str += IF((i& Bonus) != 0, "南風南 ", "南風 ").(string)
 			honorCnt++
 		}
 		if (i & (West >> 4)) != 0 {
 			tai += honorsTai
-			str += "西風 "
+			str += IF((i& Bonus) != 0, "西風西 ", "西風 ").(string)
 			honorCnt++
 		}
 		if (i & (North >> 4)) != 0 {
 			tai += honorsTai
-			str += "北風 "
+			str += IF((i& Bonus) != 0, "北風北 ", "北風 ").(string)
 			honorCnt++
 		}
 		if (i & (Red >> 4)) != 0 {
