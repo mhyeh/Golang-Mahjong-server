@@ -27,7 +27,7 @@ type ScoreRecord struct {
 // Player represents a player in mahjong
 type Player struct {
 	Hand         SuitSet
-	EatTiles     SuitSet
+	EatTiles     []EatAction
 	PonTiles     SuitSet
 	GonTiles     SuitSet
 	OngonTiles   SuitSet
@@ -64,11 +64,11 @@ func (player Player) Socket() socketio.Socket {
 func (player *Player) Init() {
 	index := FindPlayerByUUID(player.UUID)
 	PlayerList[index].State = PLAYING
+	player.EatTiles = []EatAction{}
 	for i := 0; i < 5; i++ {
 		player.Hand[i]         = 0
 		player.DiscardTiles[i] = 0
 		player.Flowers[i]      = 0
-		player.EatTiles[i]     = 0
 		player.PonTiles[i]     = 0
 		player.GonTiles[i]     = 0
 		player.OngonTiles[i]   = 0
@@ -96,7 +96,7 @@ func (player *Player) CheckEat(tile Tile) bool {
 	for i := int(tile.Value) - 2; i <= int(tile.Value); i++ {
 		flag = true
 		for j := 0; j < 3; j++ {
-			if !(i + j > 0) || !(i + j <= 9) || !player.Hand.Have(NewTile(tile.Suit, uint(i + j))) {
+			if (i + j < 0) || (i + j >= 9) || !player.Hand.Have(NewTile(tile.Suit, uint(i + j))) {
 				flag = false
 				i   += j
 				break
@@ -121,9 +121,9 @@ func (player *Player) CheckHu(tile Tile, isZimo uint, tai *TaiData) bool {
 
 	info.Hand = player.Hand
 
-	eatCount := int(player.EatTiles.Count())
+	eatCount := len(player.EatTiles)
 	for i := 0; i < eatCount; i++ {
-		firstTile := player.EatTiles.At(i)
+		firstTile := player.EatTiles[i].First
 		for j := uint(0); j < 3; j++ {
 			info.Door.Add(NewTile(firstTile.Suit, firstTile.Value + j))
 		}
@@ -154,8 +154,8 @@ func (player *Player) CheckHu(tile Tile, isZimo uint, tai *TaiData) bool {
 	}
 
 	info.AllChow = uint(IF(player.PonTiles.Count() == 0 && player.GonTiles.Count() == 0 && player.OngonTiles.Count() == 0, 1, 0).(int))
-	info.AllPon  = uint(IF(player.EatTiles.Count() == 0, 1, 0).(int))
-	info.IsClean = uint(IF(player.EatTiles.Count() == 0 && player.PonTiles.Count() == 0 && player.GonTiles.Count() == 0, 1, 0).(int))
+	info.AllPon  = uint(IF(len(player.EatTiles) == 0, 1, 0).(int))
+	info.IsClean = uint(IF(len(player.EatTiles) == 0 && player.PonTiles.Count() == 0 && player.GonTiles.Count() == 0, 1, 0).(int))
 	info.NoBonus = uint(IF(player.Flowers.Count()  == 0, 1, 0).(int))
 	info.IsZimo  = isZimo
 
@@ -189,14 +189,17 @@ func (player *Player) Hu(tile Tile, tai TaiData, Type int, robGon bool, addToRoo
 		player.Flowers[4].Have(4) && player.Flowers[4].Have(5) && player.Flowers[4].Have(6) && player.Flowers[4].Have(7)) {
 			tai.Tai     += 2
 			tai.Message += "花槓 "
-		} else if player.Flowers[4].Have(season) {
-			msg := []string{"春", "夏", "秋", "冬"}
-			tai.Tai++
-			tai.Message += msg[season] + " "
-		} else if player.Flowers[4].Have(season + 4) {
-			msg := []string{"梅", "蘭", "竹", "菊"}
-			tai.Tai++
-			tai.Message += msg[season] + " "
+		} else {
+			if player.Flowers[4].Have(season) {
+				msg := []string{"春", "夏", "秋", "冬"}
+				tai.Tai++
+				tai.Message += msg[season] + " "
+			} 
+			if player.Flowers[4].Have(season + 4) {
+				msg := []string{"梅", "蘭", "竹", "菊"}
+				tai.Tai++
+				tai.Message += msg[season] + " "
+			}
 		}
 	}
 		
@@ -253,7 +256,7 @@ func (player *Player) Pon(tile Tile) {
 // Eat eats the tile
 func (player *Player) Eat(eatAction EatAction) {
 	tile := eatAction.First
-	player.EatTiles.Add(tile)
+	player.EatTiles = append(player.EatTiles, eatAction)
 	for i := uint(0); i < 3; i++ {
 		if tile.Value + i != eatAction.Center.Value {
 			player.Hand.Sub(NewTile(tile.Suit, tile.Value + i))

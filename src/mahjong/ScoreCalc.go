@@ -110,7 +110,7 @@ func (scoreCalc ScoreCalc) CountTai(info HuInfo) TaiData {
 
 	if suits == 9 || suits == 10 || suits == 12 {
 		f |= MixSuit
-	} else if suits == 0 || suits == 2 || suits == 4 || suits == 8 {
+	} else if suits == 1 || suits == 2 || suits == 4 || suits == 8 {
 		f |= SameSuit
 	}
 

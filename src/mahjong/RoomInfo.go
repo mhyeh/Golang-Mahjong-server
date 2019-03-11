@@ -1,5 +1,9 @@
 package mahjong
 
+import (
+	"strings"
+)
+
 // GetPlayerList returns the list of player's name
 func (room Room) GetPlayerList() []string {
 	var nameList []string
@@ -51,11 +55,15 @@ func (room Room) GetDoor(id int) ([][][]string, []int, bool) {
 	var inVisibleList []int
 	var visibleList   [][][]string
 	for _, player := range room.Players {
+		var tmp []string
+		for _, act := range player.EatTiles {
+			tmp = append(tmp, strings.Join([]string{ act.First.ToString(), act.Center.ToString() }, ","))
+		}
 		if id == player.ID {
-			visibleList   = append(visibleList, [][]string{ player.EatTiles.ToStringArray(), player.PonTiles.ToStringArray(), player.GonTiles.ToStringArray(), player.OngonTiles.ToStringArray() })
+			visibleList   = append(visibleList, [][]string{ tmp, player.PonTiles.ToStringArray(), player.GonTiles.ToStringArray(), player.OngonTiles.ToStringArray() })
 			inVisibleList = append(inVisibleList, 0)
 		} else {
-			visibleList   = append(visibleList, [][]string{ player.EatTiles.ToStringArray(), player.PonTiles.ToStringArray(), player.GonTiles.ToStringArray(), []string{} })
+			visibleList   = append(visibleList, [][]string{ tmp, player.PonTiles.ToStringArray(), player.GonTiles.ToStringArray(), []string{} })
 			inVisibleList = append(inVisibleList, int(player.OngonTiles.Count()))
 		}
 	}

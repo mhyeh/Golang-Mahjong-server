@@ -4,6 +4,7 @@ import (
 	"math/rand"
 	"sync"
 	"time"
+	"strings"
 )
 
 // Game State
@@ -140,7 +141,7 @@ func (room *Room) Run() {
 			}
 		}
 	}
-
+	room.BroadcastGameEnd()
 	players := FindPlayerListInRoom(room.Name, 1)
 	for _, player := range players {
 		player.State = WAITING
@@ -402,10 +403,14 @@ func (room *Room) doAction(currentIdx int, throwTile Tile, huIdxArray []int, gon
 func (room *Room) end() {
 	var data []GameResult
 	for _, player := range room.Players {
+		var tmp []string
+		for _, act := range player.EatTiles {
+			tmp = append(tmp, strings.Join([]string{ act.First.ToString(), act.Center.ToString() }, ","))
+		}
 		data = append(data, GameResult{
 			player.Hand.ToStringArray(),
 			[][]string{
-				player.EatTiles.ToStringArray(),
+				tmp,
 				player.PonTiles.ToStringArray(),
 				player.GonTiles.ToStringArray(),
 				player.OngonTiles.ToStringArray(),

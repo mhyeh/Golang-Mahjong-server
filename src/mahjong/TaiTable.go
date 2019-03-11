@@ -33,6 +33,9 @@ func (simplesTaiTable *SimplesTaiTable) initTable() {
 			if (i & OnlyHasEye) != 0 && (i & Zimo) == 0 {
 				tai += 2
 				str += "全求人 "
+			} else if (i & OnlyHasEye) != 0 {
+				tai++
+				str += "半求人 "
 			} else if (i & Clean) != 0 {
 				tai++
 				str += "門清 "
@@ -56,7 +59,7 @@ func (simplesTaiTable *SimplesTaiTable) initTable() {
 			} else if (i & SameSuit) != 0 {
 				tai += 8
 				str += "清一色 "
-			} else if ( i& MixSuit) != 0 && (i & SameSuit) != 0 {
+			} else if (i & MixSuit) != 0 && (i & SameSuit) != 0 {
 				continue
 			}
 			// 碰碰胡

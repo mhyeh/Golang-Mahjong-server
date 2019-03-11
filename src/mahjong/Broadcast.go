@@ -83,3 +83,8 @@ func (room Room) BroadcastEnd(data []GameResult) {
 func (room Room) BroadcastRobGon(id int, tile Tile) {
 	room.IO.BroadcastTo(room.Name, "robGon", id, tile.ToString())
 }
+
+// BroadcastGameEnd broadcasts when the game end
+func (room Room) BroadcastGameEnd() {
+	room.IO.BroadcastTo(room.Name, "gameEnd")
+}
