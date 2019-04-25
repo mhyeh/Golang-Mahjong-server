@@ -73,6 +73,11 @@ func (room Room) BroadcastCommand(from int, to int, command int, tile string, sc
 	}
 }
 
+// BroadcastTing broadcasts the player's id which is ting
+func (room Room) BroadcastTing(id int) {
+	room.IO.BroadcastTo(room.Name, "broadcastTing", id)
+}
+
 // BroadcastEnd broadcasts the game result
 func (room Room) BroadcastEnd(data []GameResult) {
 	result, _ := json.Marshal(data)

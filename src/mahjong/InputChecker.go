@@ -24,3 +24,12 @@ func (player *Player) checkCommand(val interface{}) bool {
 	}
 	return flag && act.Tile.Suit != -1
 }
+
+func (player *Player) checkTing(val interface{}) bool {
+	switch val.(type) {
+	case bool:
+		return true
+	default:
+		return false
+	}
+}

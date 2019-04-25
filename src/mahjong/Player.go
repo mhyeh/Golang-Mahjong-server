@@ -37,6 +37,7 @@ type Player struct {
 	Credit       int
 	JustGon      bool
 	FirstDraw    bool
+	IsTing       bool
 	ID           int
 	UUID         string
 	room         *Room
@@ -75,12 +76,13 @@ func (player *Player) Init() {
 	}
 
 	player.JustGon  = false
+	player.IsTing   = false
 	player.ScoreLog = ScoreRecord{}
 }
 
 // CheckPon checks if the player can pon
 func (player *Player) CheckPon(tile Tile) bool {
-	if tile.Suit < 0 || tile.Suit > 3 {
+	if tile.Suit < 0 || tile.Suit > 3 || player.IsTing {
 		return false
 	}
 	return player.Hand[tile.Suit].GetIndex(tile.Value) >= 2
@@ -88,7 +90,7 @@ func (player *Player) CheckPon(tile Tile) bool {
 
 // CheckEat checks if the player can eat
 func (player *Player) CheckEat(tile Tile) bool {
-	if tile.Suit < 0 || tile.Suit > 2 {
+	if tile.Suit < 0 || tile.Suit > 2 || player.IsTing {
 		return false
 	}
 	player.Hand.Add(tile)
@@ -108,6 +110,28 @@ func (player *Player) CheckEat(tile Tile) bool {
 	}
 	player.Hand.Sub(tile)
 	return flag
+}
+
+// CheckTing checks if the player can ting
+func (player *Player) CheckTing() bool {
+	if player.IsTing {
+		return false
+	}
+	for i := 0; i < 3; i++ {
+		for j := uint(0); j < 9; j++ {
+			tai := &TaiData{ -1, "" }
+			if player.CheckHu(NewTile(i, j), 0, tai) {
+				return true
+			}
+		}
+	}
+	for i := uint(0); i < 7; i++ {
+		tai := &TaiData{ -1, "" }
+		if player.CheckHu(NewTile(4, i), 0, tai) {
+			return true
+		}
+	}
+	return false
 }
 
 // CheckHu checks if the player can hu
@@ -181,6 +205,10 @@ func (player *Player) Hu(tile Tile, tai TaiData, Type int, robGon bool, addToRoo
 	if player.JustGon {
 		tai.Tai++
 		tai.Message += "槓上花 "
+	}
+	if player.IsTing {
+		tai.Tai++
+		tai.Message += "聽 "
 	}
 
 	season := (4 + player.ID - player.room.OpenIdx) % 4

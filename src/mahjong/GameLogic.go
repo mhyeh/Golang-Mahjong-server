@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+const roundAmount = 1
+
 // Game State
 const (
 	BeforeStart = iota
@@ -29,7 +31,7 @@ func (room *Room) Run() {
 		recover()
 	}()
 	room.NumKeepWin = 0
-	for i := 0; i < 4; i++ {
+	for i := 0; i < roundAmount; i++ {
 		for j := 0; j < 4; j++ {
 			room.setWindAndRound(i, j)
 
@@ -283,17 +285,27 @@ func (room *Room) robGon(currentIdx int, playersAct [3]Action, huTile Tile, huId
 		id        := (i + currentIdx) % 4
 		playerAct := playersAct[i - 1]
 		if (playerAct.Command & COMMAND["HU"]) != 0 {
-			tai := TaiData{ -1, "" }
-			room.Players[id].CheckHu(huTile, 0, &tai)
-			room.Players[id].Hu(huTile, tai, COMMAND["HU"], true, !fail, currentIdx)
-			// score := room.Players[id].Hu(huTile, tai, COMMAND["HU"], true, !fail, currentIdx)
-			// room.Players[id].Success(currentIdx, COMMAND["HU"], huTile, score)
+			*huIdxArray = append(*huIdxArray, id)
 			if !fail {
 				curPlayer.GonTiles.Sub(huTile)
 				curPlayer.PonTiles.Add(huTile)
 			}
 			*huIdxArray = append(*huIdxArray, id)
 			fail        = true
+		}
+	}
+	if len(*huIdxArray) == 1 || len(*huIdxArray) == 2 {
+		tai := TaiData{ -1, "" }
+		room.Players[(*huIdxArray)[0]].CheckHu(huTile, 0, &tai)
+		room.Players[(*huIdxArray)[0]].Hu(huTile, tai, COMMAND["HU"], true, true, currentIdx)
+		if len(*huIdxArray) == 2 {
+			room.Players[(*huIdxArray)[1]].Fail(COMMAND["HU"])
+		}
+	} else {
+		for i := 0; i < 3; i++ {
+			tai := TaiData{ -1, "" }
+			room.Players[(*huIdxArray)[i]].CheckHu(huTile, 0, &tai)
+			room.Players[(*huIdxArray)[i]].Hu(huTile, tai, COMMAND["HU"], true, i == 0, currentIdx)
 		}
 	}
 	return fail
@@ -355,6 +367,9 @@ func (room *Room) checkOthers(currentIdx int, throwTile Tile, huIdxArray *[]int,
 		tai := TaiData{ -1, "" }
 		room.Players[(*huIdxArray)[0]].CheckHu(throwTile, 0, &tai)
 		room.Players[(*huIdxArray)[0]].Hu(playerAct.Tile, tai, COMMAND["HU"], false, true, currentIdx)
+		if len(*huIdxArray) == 2 {
+			room.Players[(*huIdxArray)[1]].Fail(COMMAND["HU"])
+		}
 	} else if len(*huIdxArray) == 3 {
 		for i := 1; i < 4; i++ {
 			playerID    := (i + currentIdx) % 4

@@ -18,6 +18,7 @@ var COMMAND = map[string]int{
 	"HU":     16,
 	"ZIMO":   32,
 	"EAT":    64,
+	"TING":   128,
 }
 
 // NewAction creates a new action
@@ -76,6 +77,10 @@ func (player *Player) Throw(drawTile Tile) Tile {
 	if drawTile.Suit == -1 {
 		drawTile = player.Hand.At(0)
 	}
+	if player.IsTing {
+		return drawTile
+	}
+
 	defaultTile := drawTile.ToString()
 	waitingTime := 10 * time.Second
 	go player.Socket().Emit("throw", defaultTile, waitingTime / microSec)
@@ -88,6 +93,17 @@ func (player *Player) Throw(drawTile Tile) Tile {
 	}
 	player.Hand.Sub(throwTile)
 	player.room.BroadcastThrow(player.ID, throwTile)
+	if player.CheckTing() {
+		go func() {
+			waitingTime = 5 * time.Second
+			go player.Socket().Emit("ting", waitingTime / microSec)
+			val = player.waitForSocket("sendTing", false, waitingTime)
+			if player.checkTing(val) && val.(bool) {
+				player.IsTing = true
+				player.room.BroadcastTing(player.ID)
+			}
+		}()
+	}
 	return throwTile
 }
 
@@ -200,7 +216,7 @@ func (player *Player) checkDrawAction(tile Tile, tai TaiData) (ActionSet, int) {
 			if player.Hand[s].GetIndex(v) == 4 {
 				command |= COMMAND["ONGON"]
 				actionSet[COMMAND["ONGON"]] = append(actionSet[COMMAND["ONGON"]], tmpTileStr)
-			} else if player.Hand[s].GetIndex(v) == 1 && player.PonTiles.Have(tmpTile) {
+			} else if player.Hand[s].GetIndex(v) == 1 && player.PonTiles.Have(tmpTile) && !player.IsTing {
 				command |= COMMAND["PONGON"]
 				actionSet[COMMAND["PONGON"]] = append(actionSet[COMMAND["PONGON"]], tmpTileStr)
 			}
@@ -217,7 +233,7 @@ func (player *Player) checkNonDrawAction(id int, tile Tile, tai TaiData) (Action
 		command |= COMMAND["HU"]
 		actionSet[COMMAND["HU"]] = append(actionSet[COMMAND["HU"]], tileStr)
 	}
-	if player.Hand[tile.Suit].GetIndex(tile.Value) == 3 && (id + 1) % 4 != player.ID {
+	if player.Hand[tile.Suit].GetIndex(tile.Value) == 3 && (id + 1) % 4 != player.ID && !player.IsTing {
 		command |= COMMAND["GON"]
 		actionSet[COMMAND["GON"]] = append(actionSet[COMMAND["GON"]], tileStr)
 	}
