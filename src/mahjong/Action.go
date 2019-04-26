@@ -77,27 +77,30 @@ func (player *Player) Throw(drawTile Tile) Tile {
 	if drawTile.Suit == -1 {
 		drawTile = player.Hand.At(0)
 	}
+	
+	var throwTile Tile
+	waitingTime := 10 * time.Second
+
 	if player.IsTing {
-		return drawTile
+		throwTile = drawTile
+	} else {
+		defaultTile := drawTile.ToString()
+		go player.Socket().Emit("throw", defaultTile, waitingTime / microSec)
+		val := player.waitForSocket("throwTile", defaultTile, waitingTime)
+		if player.checkThrow(val) {
+			throwTile = StringToTile(val.(string))
+		} else {
+			throwTile = StringToTile(defaultTile)
+		}
 	}
 
-	defaultTile := drawTile.ToString()
-	waitingTime := 10 * time.Second
-	go player.Socket().Emit("throw", defaultTile, waitingTime / microSec)
-	val := player.waitForSocket("throwTile", defaultTile, waitingTime)
-	var throwTile Tile
-	if player.checkThrow(val) {
-		throwTile = StringToTile(val.(string))
-	} else {
-		throwTile = StringToTile(defaultTile)
-	}
 	player.Hand.Sub(throwTile)
 	player.room.BroadcastThrow(player.ID, throwTile)
 	if player.CheckTing() {
 		go func() {
 			waitingTime = 5 * time.Second
 			go player.Socket().Emit("ting", waitingTime / microSec)
-			val = player.waitForSocket("sendTing", false, waitingTime)
+			val := player.waitForSocket("sendTing", false, waitingTime)
 			if player.checkTing(val) && val.(bool) {
 				player.IsTing = true
 				player.room.BroadcastTing(player.ID)
