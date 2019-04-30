@@ -108,3 +108,12 @@ func (room Room) GetScore() []int {
 	}
 	return scoreList
 }
+
+// GetTing returns each player's isTing
+func (room Room) GetTing() []bool {
+	var tingList []bool
+	for _, player := range room.Players {
+		tingList = append(tingList, player.IsTing)
+	}
+	return tingList
+}
